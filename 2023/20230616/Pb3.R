@@ -90,14 +90,7 @@ sigma2_b   <- as.numeric(get_variance_random(lmm1))
 PVRE <- sigma2_b/(sigma2_b+sigma2_eps)
 PVRE 
 
-# This is a ratio of the variance that is present by both the randomic effect for the single
-# lake (sigma_b), and the variance of the residual (sigma_eps) that can't be captured
-# If this ratio is high (say 50%), it means that half of the uncertainty of the goodness of the 
-# treatment is due to the residual, but the other half because is different for two person
-# -> hence, we are unsure about the effectiveness of the treatment since behave 
-#    different from person to person
-# We get a low PVRE -> we are sure that being in a lake or another has effect
-# on the DO 
+# 3.9% interpretation?
 
 dotplot(ranef(lmm1, condVar=T))
 # The one with lowest concentration of DO is lake levico

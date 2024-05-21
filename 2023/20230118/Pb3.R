@@ -71,10 +71,6 @@ sigma2_eps
 sigma2_b <- as.numeric(get_variance_random(fm.log.reduced.reg))
 sigma2_b
 
-# Another way to interpret the variance output is to note percentage of the student variance out 
-# of the total, i.e. the Percentage of Variance explained by the Random Effect (PVRE).
-# This is also called the intraclass correlation (ICC), because it is also an estimate of the within 
-# cluster correlation.
 PVRE <- sigma2_b/(sigma2_b+sigma2_eps)
 PVRE
 # 21% 
