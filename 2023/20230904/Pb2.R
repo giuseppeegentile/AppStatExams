@@ -15,8 +15,8 @@ dim(data)
 data.feats <- data[,1:4]
 head(data.feats)
 
-# true <- doped
-# false <- clean
+true <- "doped"
+false <- "clean"
 
 
 # misclassification costs
@@ -91,24 +91,58 @@ qda.data
   
 }
 
-
-# c)
-qda_prediction <- predict(qda.data)
-conf <- table(list(predicted=qda_prediction$class, observed=data$result))
-conf
-# Should budget at least
-((8+24)*4)*1000 #euro
-
-# on the training set, classified 32 doped over 50 
-# we will have 200 cyclists (*4), 
-# But we're optimistic since we predict on training set
-
-
 # d)
-# Expanses with the 2 fold strategy:
-1*50000 + 8*1000 - 24*1000
-                    # This cost is equivalent to the estimated
-                    # economic benefit of correctly identifying a true doping case
-# Expanses with every cyclist testes with blood 
-50*1000
+{
+  new_total <- 200
+  cost_per_test <- 1000 # cost of the lab test
+  TP <- 0  # True Positives
+  TN <- 0  # True Negatives
+  FP <- 0  # False Positives
+  FN <- 0  # False Negatives
+  
+  # Perform LOOCV
+  for(i in 1:nrow(data.reduced)) {
+    QdaCV.i <- qda(data.reduced[-i,], groups.name[-i], prior=prior.c)
+    prediction <- predict(QdaCV.i, data.reduced[i,])$class
+    true_label <- groups.name[i]
+    
+    if(prediction == true_label && true_label == false) {
+      TP <- TP + 1                                      
+    } else if(prediction == true_label && true_label == true) {
+      TN <- TN + 1
+    } else if(prediction != true_label && true_label == false) {
+      FN <- FN + 1
+    } else if(prediction != true_label && true_label == true) {
+      FP <- FP + 1
+    }
+  }
+  
+  # Sensitivity and specificity
+  sensitivity <- TP / (TP + FN)  # True Positive Rate
+  specificity <- TN / (TN + FP)  # True Negative Rate
+  
+  # Estimate number of "false" in "new_total" observations
+  expected_false <- new_total * pf
+  expected_true  <- new_total * pt
+  
+  
+  # Calculate true positives and false positives
+  true_positives <- sensitivity * expected_false
+  false_positives <- (1 - specificity) * expected_true
+  
+  # Number of flagged products: those that will be analysed in lab
+  total_flagged <- true_positives + false_positives
+  
+  
+  budget <- total_flagged * cost_per_test
+  budget 
+  # If we would test all the observations, we'd spend
+  cost_per_test*new_total
+  budget < cost_per_test*new_total
+  # TRUE -> we're saving money wrt to testing everyone
+  
+  # saving:
+  cost_per_test*new_total - budget 
+}
+
 
