@@ -100,6 +100,8 @@ dotplot(ranef(lmm1))
 
 # estimate of the standard deviation of the random intercept
 sd(residuals(lmm1))
-# estimate of the error ??
+
+# estimate of the standard deviation of the error (?)
+# from summary -> 11.32
 
 
