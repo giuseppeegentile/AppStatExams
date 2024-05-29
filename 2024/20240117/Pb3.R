@@ -20,10 +20,60 @@ library(lattice)
 library(plot.matrix)
 
 data <- read.table("StorageCentres.txt", header = T)
-head(data)
+# head(data)
+
+
+# a) -------------------------
+
+m0 <- lm(costs ~ time + costs0 + growth:time + rad_less_15_city + size, data = data)
+# summary(m0)
+
+rbind("Sigma", sqrt(sum((m0$residuals)^2)/m0$df))
+print("Coefficients"); m0$coefficients
+rbind("AIC", AIC(m0))
+
+
+# b) ----------------------------------------------------------------------
+
+par(mfrow=c(1,1))
+plot(fitted(m0), rstandard(m0))
+abline(h = 0, col = 'red')
+
+par(mfrow=c(1,2))
+
+boxplot(rstandard(m0) ~ data$id_storage_centre, col = rainbow(length(unique(data$id_storage_centre))),
+        xlab='Centres', ylab='Std. Residuals', main ='Distribution of std. residuals across centres')
+
+boxplot(rstandard(m0) ~ data$time, col = rainbow(length(unique(data$time))),
+        xlab='Semesters', ylab='Std. Residuals', main ='Distribution of std. residuals across semesters') 
+## -> the variance of the observations increases in time
+
+
+# c) ----------------------------------------------------------------------
+
+m1 <- gls(costs ~ time + costs0 + growth:time + rad_less_15_city + size,  # the same as before
+             weights = varPower(form = ~time), # Var. function; <delta, stratum>-group
+             data = data)
+# summary(m1)
+
+m1$modelStruct$varStruct
+rbind("AIC", AIC(m0))
+
+
+# d) ----------------------------------------------------------------------
+
+m2 <- update(m1, 
+             correlation = corAR1(form = ~time|id_storage_centre),
+             data = data)
+# summary(m2)
+
+intervals(m2, which = "var-cov")$corStruct
+anova(m1, m2) # m1 is better
+
+
+# Extra -------------------------------------------------------------------
 
 ## Visualize some of the trends
-# data.subset <- subset(data, as.numeric(id_storage_centre) %in% seq(1, 40, 2)) # one each 2 centres
 
 library(dplyr)
 
@@ -57,12 +107,23 @@ tMn
 
 ## We confirm what we observe in the plot
 
+## let's color the residuals relative to different time instants
+par(mfrow=c(1,1))
 
-# a) -------------------------
+colori = rainbow(length(unique(data$time)))
+num_ctr = table(data$time)
+colori2 = rep(colori, num_ctr)
+plot(rstandard(m0), col = colori2)
+abline(h=0)
 
-m0 <- lm(costs ~ time + costs0 + growth:time + rad_less_15_city + size, data = data)
-summary(m0)
+## Variogram per time lag
+Vg2 <- Variogram(m1, form = ~time | id_storage_centre)
+Vg2
+plot(Vg2, smooth = FALSE, xlab = "Time Lag", ylim = c(0.8, 1.1))
 
-rbind("Sigma", sqrt(sum((m0$residuals)^2)/m0$df))
-m0$coefficients
-rbind("AIC", AIC(m0))
+# The marginal variance-covariance structure
+m2vcov <- getVarCov(m2, individual = "2")  #estimate of R_i, e.g. i=2
+nms <- c("1", "2", "3", "4", "5")
+dnms <- list(nms, nms) # Dimnames created
+dimnames(m2vcov) <- dnms # Dimnames assigned
+print(m2vcov)
