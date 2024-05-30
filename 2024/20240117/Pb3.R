@@ -28,7 +28,7 @@ y   <- data$costs
 
 
 # Assumptions: E(Eps) = 0  and  Var(Eps) = sigma^2 
-fm <- lm(y ~ time + costs0 + growth*time + rad_less_15_city + size,data=data)
+fm <- lm(y ~ time + costs0 + growth:time + rad_less_15_city + size,data=data)
 summary(fm) 
 
 sqrt(sum(residuals(fm)^2)/fm$df)  # s estimate of sigma
@@ -49,11 +49,11 @@ boxplot(fm$residuals ~ data$time,  xlab='Time.f', ylab='Residuals')
 # We model the variance as a function of time: 
 
 #c)
-fm9.2 <- gls(y ~ time + costs0 + growth*time + rad_less_15_city + size,
+fm9.2 <- gls(y ~ time + costs0 + growth:time + rad_less_15_city + size,
              weights = varPower(form = ~time), # Var. function; <delta, v_it>-group
              data = data)
 summary(fm9.2)
-# delta estimated as: 0.8808694
+# delta estimated as: 0.88779
 
 AIC(fm9.2)
 #lower than before, better
@@ -65,7 +65,7 @@ anova(fm9.2,fm) #very low pval, there is difference in the models
 
 
 # d)
-fm12.2 <- gls(y ~ time + costs0 + growth*time + rad_less_15_city + size, 
+fm12.2 <- gls(y ~ time + costs0 + growth:time + rad_less_15_city + size, 
               weights = varPower(form = ~time),
               correlation = corAR1(form = ~1),
               data = data)
@@ -75,8 +75,8 @@ summary(fm12.2)
 # Confidence intervals for phi and sigma
 {
   intervals(fm12.2, which = "var-cov")
-  # If CI for phi is 0 -> lack of autocorrelation of first order among the
-  #                                       repeated measures within subject.
+  # CI for phi contains 0 -> lack of autocorrelation of first order among the
+  #                                       repeated measures within same time
 }
 
 
