@@ -1,0 +1,200 @@
+rm(list=ls())
+graphics.off()
+library(car)
+library(MVN)
+
+
+t1 <- read.table("candle.txt",header=T)
+t2<- read.table("sunshine.txt",header=T)
+
+n1 = 50
+p = 2
+n2 = 50
+
+
+t1.mean <- sapply(t1, mean)
+t2.mean <- sapply(t2, mean)
+t1.cov  <-  cov(t1)
+t2.cov  <-  cov(t2)
+Sp      <- ((n1 - 1) * t1.cov + (n2 - 1) * t2.cov) / (n1 + n2 - 2)
+Spinv  <- solve(Sp)
+df1.mean = t1.mean
+df2.mean = t2.mean
+
+# We compare the matrices -> here, using rule of thumb:
+# we don't reject equality of covariance matrices if s1_ii and s2_ii differ from
+# less than a factor ~4 (see J-W p.291)
+# In pratica dobbiamo controllare a mano che gli elementi sulla DIAGONALE non siano diversi per più di un fattore 4
+list(S1 = t1.cov, S2 = t2.cov, Spooled = Sp)
+
+
+# SE ABBIAMO ABBASTANZA DATI
+
+# Matrici di covarianza calcolate sopra
+t1.cov
+t2.cov
+
+#Visual check
+par(mfrow=c(1,2))
+#add df3.cov if any!
+myquantile<-quantile(rbind(t1.cov,t2.cov), (0:100)/100, na.rm=TRUE)
+image(t1.cov, col=heat.colors(100),main='Cov. df1', asp=1, axes = FALSE, 
+      breaks = myquantile)
+image(t2.cov, col=heat.colors(100),main='Cov. df2', asp=1, axes = FALSE, 
+      breaks = myquantile)
+
+
+#See lab 9 row 1141!
+#-------------------------------------------------------------------------------------
+# Test for the difference of the mean of independent gaussian populations
+#-------------------------------------------------------------------------------------
+# Test H0: mu1 == mu2  vs  H1: mu1 != mu2
+# i.e.,
+# Test H0: mu1-mu2 == c(0,..,0)  vs  H1: mu1-mu2 != c(0,..,0) #c is Vector in R^p
+# in our case p= XXXXXXXX
+
+
+#Assumptions:
+# - same covariance structure (to use Spooled)
+# - multivariate gaussianity of each df (?)
+
+
+delta<-c(0,0) #vector in R^p - change accordingly
+alpha<-0.1
+cfr.fisher <- (p*(n1+n2-2)/(n1+n2-1-p))*qf(1-alpha,p,n1+n2-1-p)
+
+#Statistics
+T2 <- n1*n2/(n1+n2) * (df1.mean-df2.mean-delta) %*% Spinv %*% (df1.mean-df2.mean-delta)
+T2 < cfr.fisher # TRUE: no statistical evidence to reject H0 at confidence level 1-alpha%
+
+#P value
+P <- 1 - pf(T2/(p*(n1+n2-2)/(n1+n2-1-p)), p, n1+n2-1-p)
+P  
+
+
+#-------------------------------------------------------------------------------------
+# Simultaneous T2 confidence intervals for the DIFFERENCE of the means 
+#-------------------------------------------------------------------------------------
+#See lab 9 row 1141
+
+#Assumptions:
+# - same covariance structure (to use Spooled)
+# - multivariate gaussianity of each df (?)
+
+
+alpha<-0.05
+cfr.fisher <- (p*(n1+n2-2)/(n1+n2-1-p))*qf(1-alpha,p,n1+n2-1-p)
+
+IC.T2 <- cbind( inf=df1.mean - df2.mean - sqrt (diag(Sp)*(1/n1+1/n2)*cfr.fisher),
+                center= df1.mean-df2.mean,
+                sup= df1.mean - df2.mean +  sqrt(diag(Sp)*(1/n1+1/n2)*cfr.fisher))
+IC.T2
+
+
+####Bonferroni
+
+k <- 2 
+alpha<-0.05
+cfr.t <- qt(1-alpha/(2*k),n1+n2-2)
+
+Bf <- cbind(inf = df1.mean - df2.mean - cfr.t*sqrt(diag(Sp)*(1/n1+1/n2)),
+            center = df1.mean - df2.mean,
+            sup = df1.mean - df2.mean + cfr.t*sqrt(diag(Sp)*(1/n1+1/n2)))
+Bf
+
+
+
+#############
+
+
+alpha<-0.05
+t1 = t1[,1]-t1[,2]
+t2 = t2[,1]-t2[,2]
+shapiro.test(t1)
+shapiro.test(t2)
+bartlett.test(data,group)
+
+
+t.test(t1, t2, conf.level=0.95, alternative="greater", 
+       mu=0, var.equal=T, paired=F)
+
+
+
+#####EX 3
+###################################################################
+##################################################################
+rm(list=ls())
+graphics.off()
+library(MASS)
+library(car)
+library(rgl)   #3D plots
+library(leaps) #best subset selection
+library(tree)  #decision trees
+library(corrplot) #correlation
+library(glmnet)
+df<-read.table("leaven.txt",header=T)
+head(df)
+df$time_squared<-df$time^2
+head(df)
+
+head(df)
+fit1 <-lm(volume~yeast +yeast:time+yeast:time_squared,data=df)
+summary(fit1)
+
+par(mfrow=c(2,2))
+plot(fit1)
+shapiro.test(residuals(fit1))
+par(mfrow=c(1,1))
+
+fit2 <-lm(volume~ time + time_squared,data=df)
+summary(fit2)
+anova(fit1,fit2)
+
+par(mfrow=c(2,2))
+plot(fit2)
+shapiro.test(residuals(fit2))
+par(mfrow=c(1,1))
+
+anova(fit2,fit1)
+
+summary(fit1)
+summary(fit2)
+
+
+head(df)
+df$dummysd<-ifelse(df$yeast=='sd',1,0)
+head(df)
+
+fit1 <-lm(volume~yeast +yeast:time+yeast:time_squared,data=df)
+summary(fit1)
+
+#(la linear hypothesis parte da beta0!)
+C=rbind(
+        c(0,0,0,0,1,0)
+)
+hyp0<-c(0) #tanti elementi quante righe di c
+linearHypothesis(fit1, C, hyp0) 
+summary(fm)
+
+head(df)
+fit1 <-lm(volume~ time+ time_squared +dummysd + dummysd:time+ dummysd:time_squared ,data=df)
+fit3 <-lm(volume~ time+ time_squared +dummysd + dummysd:time+ dummysd:time_squared ,data=df)
+
+anova(fit3,fit1)
+
+
+
+
+#####
+head(df)
+Zsd.new <- data.frame(time = 2,time_squared = 4, dummysd = 0)
+Zby.new <- data.frame(time = 2,time_squared = 4, dummysd = 1)
+
+
+Conf <- predict(fit3, Zsd.new, 
+                interval='confidence', level=1-0.01)  
+t(Conf)
+
+Conf <- predict(fit3, Zby.new, 
+                interval='confidence', level=1-0.01)  
+t(Conf)
