@@ -42,3 +42,34 @@ for(k in 1:4)
 }
   
 points(means, pch=17, cex=1.5)
+
+
+# b) ----------------------------------------------------------------------
+
+vars <- NULL
+for(k in 1:4)
+{
+  vars = rbind(vars, sd(data[cluster==k,1])^2)
+}
+
+n <- dim(data)[1]
+k <- 2
+alpha <- 0.1
+cfr.t <- qt(1-alpha/(2*k), n-1) 
+
+BF <- NULL
+for (i in 1:4)
+{
+  BF_i <- rbind(c(means[i] - cfr.t*sqrt(vars[i]/n),
+                  means[i],
+                  means[i] + cfr.t*sqrt(vars[i]/n)),
+                c(vars[i]*(n-1) / qchisq(1 - alpha/(2*k), n-1),
+                  vars[i],
+                  vars[i]*(n-1) / qchisq(alpha/(2*k), n-1)))
+  
+  dimnames(BF_i)[[1]] <- c(paste("m", i, sep=''), paste("v", i, sep=''))
+  BF = rbind(BF, BF_i)
+}
+
+dimnames(BF)[[2]] <- c('inf','center','sup')
+BF
