@@ -63,6 +63,20 @@ boxplot(measure[which(label_1 == "omnivorous" & label_2 == "Cretaceous")])
 boxplot(measure[which(label_1 == "omnivorous" & label_2 == "Jurassic")])
 
 
+
+# Jittering
+{
+
+  set.seed(1)
+  measure <- measure + cbind(rnorm(dim(data)[1], sd=0.025))
+  
+  # Can also be done also after the classification to see how robust is the classifier
+  # against some small variations of the dataset
+}
+par(mfrow=c(1,1))
+plot(as.vector(measure))
+
+
 # Box Cox transformation
 lambda.mult1 <-powerTransform(measure)
 measure <-bcPower(measure,lambda.mult1$lambda)
@@ -75,7 +89,7 @@ Ps <- c(
   shapiro.test(measure[which(label_1 == "omnivorous" & label_2 == "Jurassic")])$p
 )
 Ps
-# can't reject normality at 1%
+# can't reject normality at 2%
 
 
 par(mfrow=c(2,3))
@@ -101,7 +115,6 @@ fit.aov2.add <- aov(measure ~ label_1 + label_2)
 summary.aov(fit.aov2.add)
 
 # geological period is not influencing the length -> anova one way
-# Additive model
 fit.aov <- aov(measure ~ label_1)
 summary.aov(fit.aov)
 
