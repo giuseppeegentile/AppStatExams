@@ -7,6 +7,7 @@ graphics.off()
 
 options(rgl.printRglwidget = TRUE)
 
+library(MVN)
 library(mvtnorm)
 library(car)
 
@@ -119,3 +120,7 @@ print("Direction of the major semi-axis"); eigen(S/n.new)$vectors[, 1]
 print("Direction of the minor semi-axis"); eigen(S/n.new)$vectors[, 2]
 print("Length of the major semi-axis"); sqrt(cfr.fisher)*sqrt(eigen(S/n.new)$values[1])
 print("Length of the minor semi-axis"); sqrt(cfr.fisher)*sqrt(eigen(S/n.new)$values[2])
+
+mvn(scores.new)$multivariateNormality
+
+# The data don't seem Gaussian
