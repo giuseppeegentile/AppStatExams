@@ -254,8 +254,8 @@ priors <-c(12/25,13/25)
 priors
 
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-####Dalla notazione sembra che ho fatto lda ma invece ho fatto QDA, ho corretto dopo!!!!
-df.lda <- qda(df, group, prior=priors)#.corrected if I have misclass cost)  #also lda (group~df, prior=priors)#.corrected) 
+####Farei QDA perchè non ho normalità!!
+df.lda <- lda(df, group, prior=priors)#.corrected if I have misclass cost)  #also lda (group~df, prior=priors)#.corrected) 
 
 df.lda
 
