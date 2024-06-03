@@ -12,6 +12,7 @@ head(data)
 
 dim(data)
 
+y <- data$avg_exp 
 n <- dim(data)[1]
 p <- dim(data)[2]
 pairs(data, pch=19)
@@ -25,7 +26,7 @@ summary(fm)
 # We have a good fit (not meaning is a good model)
 
 
-# Estimateì
+# Estimate
 sqrt(sum(residuals(fm)^2)/fm$df ) # estimate of sigma
 coefficients(fm)
 
@@ -77,28 +78,8 @@ shapiro.test(residuals(fm.add)) # high pval
 # c)
 # The difference is
 coefficients(fm.add)[5]
-
-
-
-
-# Confidence region for linear combination of coefficients
-{
-  # Build A as the linearHypothesis
-  A = rbind(c(0,0,0,0,1,0))
-  transformed_coeff = A%*%coefficients(fm.add)
-  
-  
-  transformed_vcov <- A %*% vcov(fm.add) %*% t(A)
-  eigenvectors <- eigen(transformed_vcov)$vectors
-  
-  p <- 1 # Number of coefficients tested 
-  r <- 1 # Number of regressors tested
-  
-  alpha=0.05
-  #COnfint
-  transformed_coeff - sqrt(p*qf(1-alpha,p,n-(r+1)))
-  transformed_coeff + sqrt(p*qf(1-alpha,p,n-(r+1)))
-}
+alpha = 0.05
+confint(fm, level= 1-alpha)[5,]
 
 
 # d) as sayed in point a, there is collinearity between variables. 
