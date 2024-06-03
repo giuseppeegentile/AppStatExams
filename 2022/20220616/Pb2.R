@@ -49,10 +49,8 @@ data.feats <- data[,1:p] # in this case features are before
   mvn(data[which(data$group == levels(groups.name)[1]), 1:dim(data.feats)[2]])$multivariateNormality
   mvn(data[which(data$group == levels(groups.name)[2]), 1:dim(data.feats)[2]])$multivariateNormality
 
+  boxM(data.feats, groups.name)
   
-  # var.test is used instead of bartlett.test when there are only 2 groups
-  # var.test(data.reduced[A,1], data.reduced[B,1])
-  bartlett.test(data.feats[i1,], data.feats[i2,])
   
   # Quantitatively, boxplot
   {
@@ -71,8 +69,9 @@ data.feats <- data[,1:p] # in this case features are before
     image(S2)
   }
 }
-# QDA, isnce variances are very different
+# QDA, since variances are very different
 
+plot(data [,1:2],pch=19, col=as.factor(groups.name))
 qda.data <- qda(data.feats, groups.name,
                 prior=prior
 )
