@@ -74,16 +74,16 @@ for(g in 1:G)
 print(paste("APER:", APER))
 
 errors_CV <- 0
-TP <- 0
-FP <- 0
+miscCV <- cbind(0, 0, 0, 0)
+colnames(miscCV) <- c("TN", "FN", "FP", "TP")
 for(i in 1:60)
 {
   ldaCV.i <- lda(data[-i, 1:4], hl[-i], prior = prior.c)
   errors_CV <- errors_CV + as.numeric(predict(ldaCV.i, data[i, 1:4])$class != hl[i])
-  if (predict(ldaCV.i, data[i, 1:4])$class == "low" && hl[i] == "high") 
-    FP <- FP + 1
-  if (predict(ldaCV.i, data[i, 1:4])$class == "low" && hl[i] == "low") 
-    TP <- TP + 1
+  for(j in 1:2)
+    for(k in 1:2)
+      if (predict(ldaCV.i, data[i, 1:4])$class == levels(hl)[j] && hl[i] == levels(hl)[k]) 
+        miscCV[j*k+as.numeric(j == 2 && k == 1)] <- miscCV[j*k+as.numeric(j == 2 && k == 1)] + 1
 }
 
 AERCV <- sum(errors_CV)/length(hl)
@@ -97,16 +97,43 @@ print(paste("AERCV:", AERCV))
 # c) ----------------------------------------------------------------------
 
 total_products <- 1000
+TN <- miscCV[which(colnames(miscCV) == "TN")]
+FN <- miscCV[which(colnames(miscCV) == "FN")]
+FP <- miscCV[which(colnames(miscCV) == "FP")]
+TP <- miscCV[which(colnames(miscCV) == "TP")]
 
-rbind("Budget for the laboratory test", ((FP + TP) / length(hl)) * total_products * c.lh)
+rbind("Budget for the laboratory test", ((FP / (TN + FP)) * total_products * ph + (TP / (TP + FN)) * total_products * pl) * c.lh)
 
 # I intended as: "how much money do we need to have in order to perform the lab tests?"
-# Instead, if the meaning was: "what will be the average economic loss?", I would have removed TP
+# Instead, if the meaning was: "what will be the average economic loss?", I would have removed the TP part
 
 
 # d) ----------------------------------------------------------------------
 
 prev_strategy_cost <- total_products * c.lh
-cur_strategy_cost <- (FP / length(hl)) * total_products * c.lh
+cur_strategy_cost <- (FP / (TN + FP)) * total_products * ph * c.lh + (FN / (TP + FN)) * total_products * pl * c.hl
 
 rbind("Savings", prev_strategy_cost - cur_strategy_cost)
+
+
+# Extra -------------------------------------------------------------------
+
+# Equivalent code
+errors_CV <- 0
+TN <- 0
+FN <- 0
+FP <- 0
+TP <- 0
+for(i in 1:60)
+{
+  ldaCV.i <- lda(data[-i, 1:4], hl[-i], prior = prior.c)
+  errors_CV <- errors_CV + as.numeric(predict(ldaCV.i, data[i, 1:4])$class != hl[i])
+  if (predict(ldaCV.i, data[i, 1:4])$class == "high" && hl[i] == "high") 
+    TN <- TN + 1
+  if (predict(ldaCV.i, data[i, 1:4])$class == "high" && hl[i] == "low") 
+    FN <- FN + 1
+  if (predict(ldaCV.i, data[i, 1:4])$class == "low" && hl[i] == "high") 
+    FP <- FP + 1
+  if (predict(ldaCV.i, data[i, 1:4])$class == "low" && hl[i] == "low") 
+    TP <- TP + 1
+}
