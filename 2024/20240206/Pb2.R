@@ -74,10 +74,16 @@ for(g in 1:G)
 print(paste("APER:", APER))
 
 errors_CV <- 0
+TP <- 0
+FP <- 0
 for(i in 1:60)
 {
   ldaCV.i <- lda(data[-i, 1:4], hl[-i], prior = prior.c)
   errors_CV <- errors_CV + as.numeric(predict(ldaCV.i, data[i, 1:4])$class != hl[i])
+  if (predict(ldaCV.i, data[i, 1:4])$class == "low" && hl[i] == "high") 
+    FP <- FP + 1
+  if (predict(ldaCV.i, data[i, 1:4])$class == "low" && hl[i] == "low") 
+    TP <- TP + 1
 }
 
 AERCV <- sum(errors_CV)/length(hl)
@@ -86,3 +92,21 @@ print(paste("AERCV:", AERCV))
 # APER is 0.1445, while AERCV is 0.3
 # We don't have enough observations, therefore the estimates of our parameters are a bit rough
 # and our classifier performs badly on unseen data
+
+
+# c) ----------------------------------------------------------------------
+
+total_products <- 1000
+
+rbind("Budget for the laboratory test", ((FP + TP) / length(hl)) * total_products * c.lh)
+
+# I intended as: "how much money do we need to have in order to perform the lab tests?"
+# Instead, if the meaning was: "what will be the average economic loss?", I would have removed TP
+
+
+# d) ----------------------------------------------------------------------
+
+prev_strategy_cost <- total_products * c.lh
+cur_strategy_cost <- (FP / length(hl)) * total_products * c.lh
+
+rbind("Savings", prev_strategy_cost - cur_strategy_cost)
