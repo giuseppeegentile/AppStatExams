@@ -1,0 +1,183 @@
+---
+title: "2021/01/20 Ex.1"
+author: "Marco Scarpelli"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+rm(list=ls())
+graphics.off()
+
+library(MVN)
+library(car)
+library(heplots)
+
+data <- read.table('wine.txt', header=T)
+```
+
+# Dataset exploration
+```{r echo = FALSE} 
+head(data)
+dim(data)
+```
+
+```{r include = FALSE}
+# Questo tipo di cella viene eseguita ma nè il suo output, nè il suo codice vengono mostrati
+n<-dim(data)[1]
+p<-dim(data)[2]
+
+factor_color<-factor(data$color)
+factor_region<-factor(data$region)
+
+levels_color<-levels(factor_color)
+levels_region<-levels(factor_region)
+```
+
+# Point a
+## Assumptions
+```{r echo = FALSE} 
+predicted_v <- data$alcohol
+factor_1 <- factor_color
+factor_2 <- factor_region
+
+combined_factors<-(factor_color:factor_region)
+comb_levels<-levels(combined_factors)
+
+g1 <- length(levels(factor_1))
+g2 <- length(levels(factor_2)) # lei la chiama b
+
+M            <-  mean(predicted_v)
+Mfactor1     <-  tapply(predicted_v, factor_1, mean)
+Mfactor2     <-  tapply(predicted_v, factor_2, mean)
+Mcomb_factors <- tapply(predicted_v, combined_factors, mean)
+```
+The first assumption is Gaussianity for each combination of factors; the p-values are:
+```{r echo = FALSE} 
+Ps<-NULL
+for (i in 1:length(comb_levels))
+    Ps <- c(Ps, shapiro.test(predicted_v[ combined_factors==comb_levels[i] ])$p) 
+data.frame(Ps)
+
+Ps
+0.05/length(comb_levels)
+```
+hence all combinations are Gaussian.
+
+We also want the same covariance structure. We can try Bartlett's test, keeping in mind that it is very sensitive to departures from Gaussianity:
+```{r echo = FALSE} 
+bartlett.test(predicted_v, combined_factors)
+```
+the test succeeds (i.e. the covariance structure is the same).
+
+## Running ANOVA
+We build the complete model:
+```{r echo = FALSE} 
+fit.aov2.complete <- aov(predicted_v ~ factor_1 + factor_2 + factor_1:factor_2)
+
+summary.aov(fit.aov2.complete)
+```
+
+# Point b
+We can see that according to the summary, the interaction has low statistical significance. We can try to remove it and see whether the second factor still has low significance:
+## Additive model
+
+```{r echo = FALSE} 
+fit.aov2.additive <- aov(predicted_v ~ factor_1 + factor_2)
+
+summary.aov(fit.aov2.additive)
+```
+it does, so we can safely remove it too. We can check our assumptions on the single remaining group.
+## Single-factor model
+### Assumptions
+
+Gaussianity; the p-values are:
+```{r echo = FALSE} 
+Ps <- NULL
+for (i in 1:g1)  #for each treatment level
+  Ps <- c(Ps, shapiro.test(predicted_v[ factor_1==levels(factor_1)[i] ])$p) 
+Ps
+```
+hence we accept; we also check the covariance structure:
+```{r echo = FALSE} 
+bartlett.test(predicted_v, factor_1)
+```
+we can now proceed with the new model.
+
+### Running ANOVA
+```{r echo = FALSE} 
+fit.aov2.single <- aov(predicted_v ~ factor_1)
+
+summary.aov(fit.aov2.single)
+```
+
+We check the three models against each other:
+```{r echo = FALSE} 
+anova(fit.aov2.additive, fit.aov2.complete, fit.aov2.single)
+```
+a high p-value means that the models are similar. This is expected, as we saw that neither the interaction, nor the second factor had any impact on the prediction.
+
+# Point c
+Means:
+```{r echo = FALSE} 
+# Means
+alpha <- 0.1
+DF <- fit.aov2.single$df
+g_rem<-g1 # n_levels of the _remaining_factor # (i.e. g1 or g2)
+Mediag  <- tapply(predicted_v, factor_1, mean)
+Spooled <- sum(fit.aov2.single$res^2)/DF
+k <- g_rem*(g_rem-1)/2 + 1
+
+ng <- c(length(which(data$color==levels(factor_1)[1])),
+         length(which(data$color==levels(factor_1)[2])))
+ng
+
+t <- qt(1-alpha/(2*k),DF) 
+IC.BF<-cbind(Lower=Mediag-sqrt(Spooled*(1/ng))*t,
+             Center=Mediag,
+             Upper=Mediag+sqrt(Spooled*(1/ng))*t)
+```
+
+```{r echo = FALSE} 
+# Variances
+S<- Spooled #or Spooled
+#CONTROLLARE CHE N-g_rem == DF
+#n-g_rem
+#DF
+chi_u <- qchisq(alpha/(2*k),n-g_rem) #chi upper
+chi_l <- qchisq(1-alpha/(2*k),n-g_rem) #chi lower
+
+ICBV <- data.frame(Lower=(n-g_rem)*S/chi_l,
+                   Center=S,
+                   Upper=(n-g_rem)*S/chi_u) 
+#rownames(ICBV)[1]<-"var"
+```
+
+The confidence intervals are:
+```{r echo = FALSE} 
+# Print confidence intervals
+IC<-rbind(IC.BF, ICBV)
+IC
+```
+
+## Alternative formulation
+Let us assume Bartlett's test failed: in this case, we determined that the covariance structure of the observations in the two groups is different; this means that we cannot create a satisfactory number ($\mathcal{S}_{\text{pooled}}$) that represents them jointly. We must resort to computing their individual variances:
+```{r echo = FALSE} 
+S <- tapply(predicted_v, factor_1, var)
+
+S
+```
+Notice how the mean of these two number is exactly equal to $\mathcal{S}_{\text{pooled}}$ from the previous case: this is expected, as we have 75 observations in both groups and this means that the two groups contribute in equal part to the total variability.
+
+After computing this, we can go on with the test manually:
+```{r echo = FALSE} 
+ng <- c(length(which(data$color==levels(factor_1)[1])),
+         length(which(data$color==levels(factor_1)[2])))
+
+IC.var.BF1<-data.frame(Lower=Mfactor1-sqrt(S*(1/ng))*t,Center=Mfactor1,Upper=Mfactor1+sqrt(S/ng)*t)
+
+IC.var.BF1
+```
+we find a very similar result. Notice how one of the factor has a slightly larger interval and one is slightly smaller, since they had similar variability (0.53 and 0.50), but not equal. 
