@@ -1,0 +1,192 @@
+---
+title: "CODICEPERSONA_PROBLEMA"
+author: "Marco Scarpelli"
+date: "DATA"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+rm(list=ls())
+graphics.off()
+
+library(mvtnorm)
+library(rgl) 
+library(car)
+
+#data <- read.table('NOME FILE', header=T)
+```
+# Print dataframe
+```{r echo = FALSE} 
+# Questa cella viene eseguita e viene mostrato il suo output ma non il codice.
+
+df<-read.table('rice.txt', header=T)
+head(df)
+dim(df)
+
+```
+# Point a
+We compute the dissimilarity matrix and plot it.
+
+```{r echo = FALSE} 
+n<-dim(df)[1]
+p<-dim(df)[2]
+
+dist.matrix <- dist(df, method='euclidean')
+
+par(mfrow=c(1,1))
+image(1:n, 1:n, as.matrix(dist.matrix), main = "Euclidean dissimilarity matrix", asp = 1, xlab = "i", ylab = "j", ylim = rev(range(1:n)))
+par(mfrow=c(1,1))
+```
+Let us run the algorithm with complete linkage and plot the dendrogram, drawing a box around $k=3$:
+
+```{r echo = FALSE} 
+hclust.output <- hclust(dist.matrix, method = "complete")
+plot(hclust.output, main = "Dendrogram", 
+     hang = -0.1, xlab = "", labels = F, cex = 0.6, sub = "")
+myk=3
+
+rect.hclust(hclust.output, k = myk)
+```
+
+
+We cut into 3 clusters and report the results. First, the amount of elements per cluster:
+```{r echo = FALSE} 
+clusters <- cutree(hclust.output, k = myk)
+
+# Table with output
+table(clusters)
+```
+
+Then, the cluster means:
+```{r echo = FALSE} 
+
+i1 <- which(clusters == 1)
+i2 <- which(clusters == 2)
+i3 <- which(clusters == 3)
+mean_1<- colMeans(df[i1,])
+mean_2 <- colMeans(df[i2,])
+mean_3 <- colMeans(df[i3,])
+
+rbind(mean_1,mean_2,mean_3)
+```
+
+```{r echo = FALSE} 
+plot(df, col = clusters, pch = 19)
+legend('topright', legend=c(levels(factor(clusters))), col = c(levels(factor(clusters))), lty=1)
+```
+
+# Point b
+We can see from the plot that some points in the top-right cluster were incorrectly identified as being part of the top-right one. I will try the single-linkage method, still with Euclidean distance.
+```{r echo = FALSE} 
+hclust.output <- hclust(dist.matrix, method = "single")
+plot(hclust.output, main = "Dendrogram (average linkage)", 
+     hang = -0.1, xlab = "", labels = F, cex = 0.6, sub = "")
+myk=3
+
+rect.hclust(hclust.output, k = myk)
+```
+however, the dendrogram does not look too good, in that we are cutting at a point of high "instability". Let us try average linkage:
+
+```{r echo = FALSE} 
+hclust.output <- hclust(dist.matrix, method = "average")
+plot(hclust.output, main = "Dendrogram (average linkage)", 
+     hang = -0.1, xlab = "", labels = F, cex = 0.6, sub = "")
+myk=3
+
+rect.hclust(hclust.output, k = myk)
+```
+This dendrogram is better, so we will carry on with average linkage. Next a report on elements in each cluster:
+```{r echo = FALSE} 
+clusters <- cutree(hclust.output, k = myk)
+
+# Table with output
+table(clusters)
+```
+and cluster means:
+```{r echo = FALSE} 
+
+i1 <- which(clusters == 1)
+i2 <- which(clusters == 2)
+i3 <- which(clusters == 3)
+mean_1<- colMeans(df[i1,])
+mean_2 <- colMeans(df[i2,])
+mean_3 <- colMeans(df[i3,])
+
+rbind(mean_1,mean_2,mean_3)
+```
+
+```{r echo = FALSE} 
+plot(df, col = clusters, pch = 19)
+legend('topright', legend=c(levels(factor(clusters))), col = c(levels(factor(clusters))), lty=1)
+```
+
+# Point C
+We test each cluster separately, so that is equivalent to performing tests on the mean of an univariate Gaussian; let us first verify Gaussianity of major_axis  within each cluster:
+```{r echo = FALSE} 
+shapiro.test(df[i1,1])
+shapiro.test(df[i2,1])
+shapiro.test(df[i3,1])
+```
+all three p-values are above 10%, so we can say that the data is Gaussian.
+Furthermore, we assume the data to be independent.
+
+Now, we perform the Bonferroni test; even the multivariate one will still only look at the diagonal of the matrix, so we can do that and only extrapolate the component we want, or perform an univariate test. This is because we artificially remove any interaction to be able to make more discoveries.
+
+$k=3$ since we test 3 means and 3 variables
+
+Mean:
+```{r echo = FALSE} 
+k <- 6 # 3 means and 3 variances
+alpha <- 0.05
+
+df.cov1<-cov(df[i1,])
+df.cov2<-cov(df[i2,])
+df.cov3<-cov(df[i3,])
+
+n1<-length(df[i1,1])
+n2<-length(df[i2,1])
+n3<-length(df[i3,1])
+
+cfr.t <- qt(1-alpha/(2*k),n1-1)
+Bf.IC.mean1 <- cbind(inf = mean_1 - cfr.t*sqrt(diag(df.cov1)/n1),
+                    center = mean_1, 
+                    sup = mean_1 + cfr.t*sqrt(diag(df.cov1)/n1))
+Bf.IC.mean1[1,]
+
+cfr.t <- qt(1-alpha/(2*k),n2-1)
+Bf.IC.mean2 <- cbind(inf = mean_2 - cfr.t*sqrt(diag(df.cov2)/n2),
+                    center = mean_2, 
+                    sup = mean_2 + cfr.t*sqrt(diag(df.cov2)/n2))
+Bf.IC.mean2[1,]
+
+cfr.t <- qt(1-alpha/(2*k),n3-1)
+Bf.IC.mean3 <- cbind(inf = mean_3 - cfr.t*sqrt(diag(df.cov3)/n3),
+                    center = mean_3, 
+                    sup = mean_3 + cfr.t*sqrt(diag(df.cov3)/n3))
+Bf.IC.mean3[1,]
+
+
+```
+
+Variance:
+```{r echo = FALSE} 
+Bf.IC.var1<-cbind(inf=diag(df.cov1)*(n1-1) / qchisq(1 - alpha/(2*k), n1-1),
+                 center=diag(df.cov1),
+                 sup=diag(df.cov1)*(n1-1) / qchisq(alpha/(2*k), n1-1))
+Bf.IC.var1[1,]
+
+Bf.IC.var2<-cbind(inf=diag(df.cov2)*(n2-1) / qchisq(1 - alpha/(2*k), n2-1),
+                 center=diag(df.cov2),
+                 sup=diag(df.cov2)*(n2-1) / qchisq(alpha/(2*k), n2-1))
+Bf.IC.var2[1,]
+
+Bf.IC.var3<-cbind(inf=diag(df.cov3)*(n3-1) / qchisq(1 - alpha/(2*k), n3-1),
+                 center=diag(df.cov3),
+                 sup=diag(df.cov3)*(n3-1) / qchisq(alpha/(2*k), n3-1))
+Bf.IC.var3[1,]
+```
+
+
+

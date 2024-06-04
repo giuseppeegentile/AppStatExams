@@ -1,0 +1,112 @@
+---
+title: "CODICEPERSONA_PROBLEMA"
+author: "Marco Scarpelli"
+date: "DATA"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+rm(list=ls())
+graphics.off()
+
+library(car)
+library(mvtnorm) 
+library(mvnormtest)
+library(MVN)
+
+#data <- read.table('NOME FILE', header=T)
+```
+# Print dataframe
+```{r echo = FALSE} 
+# Questa cella viene eseguita e viene mostrato il suo output ma non il codice.
+
+df<-read.table('shopping.txt', header=T)
+head(df)
+dim(df)
+
+```
+# Point a
+## Assumptions
+- Independence (we are told to assume this in the problem's text)
+- Multivariate normality since we have a low amount of observations
+
+Let us test multivariate normality:
+```{r echo = FALSE} 
+mvn(df)$multivariateNormality
+```
+We can see that we have a p-value of 7%, which is above 5% but below 10%. We continue with our analysis.
+```{r echo = FALSE} 
+alpha<-0.05
+n <- dim(df)[1]
+p <- dim(df)[2]
+x.mean    <- colMeans(df)
+x.cov    <- cov(df)
+x.invcov <- solve(x.cov)
+
+cfr.fisher <- ((n-1)*p/(n-p))*qf(1-alpha,p,n-p)
+IC.T2 <- cbind(inf = x.mean - sqrt(cfr.fisher*diag(x.cov)/n),
+            center = x.mean, 
+            sup = x.mean + sqrt(cfr.fisher*diag(x.cov)/n))
+IC.T2
+
+```
+Axes direction:
+```{r echo = FALSE} 
+direction.axes<-eigen(x.cov)$vector
+direction.axes
+```
+Other info:
+```{r echo = FALSE} 
+radius<-sqrt(cfr.fisher)
+
+rbind(mean=x.mean,radius=radius, semi.axes.length=radius*sqrt(eigen(x.cov/n)$values))
+```
+
+The expression for this confidence interval is:
+$$
+\left\{ m \in R^2 \middle| n\left(\overline{X}-m\right)^T \mathcal{S}^{-1} \left(\overline{X}-m\right) < F^* \right\}
+$$
+with $F^*$ equal to:
+$$\frac{(n-1)p}{n-p}F_{1-\alpha}(p,n-p)$$
+
+# Point b
+```{r echo = FALSE} 
+A <- rbind(c(1,0,0), c(0,1,0), c(0,0,1), c(0,1,1)) 
+
+q<-min(p, dim(A)[1])
+cfr.fisher<-((n-1)*q/(n-q))*qf(1-alpha,q,n-q)
+
+```
+
+The expression for the simultaneous confidence intervals:
+$$
+\text{Sim\textsc{ci}}_{1-\alpha}\left(A\mathbf{\mu}\right) = \left\{ \mathbf{a}^T \overline{\mathbf{X}} \pm \sqrt{\frac{(n-1)p}{n-p}F_{1-\alpha}(p,n-p)} \sqrt{\frac{\mathbf{a}^T \mathcal{S} \mathbf{a}}{n}}\right\}
+$$
+```{r echo = FALSE} 
+ICT2 <- data.frame(
+              inf= A %*% x.mean - sqrt(diag(A %*% x.cov %*% t(A))/n * cfr.fisher), 
+              center= A %*% x.mean,
+              sup= A %*% x.mean + sqrt(diag(A %*% x.cov %*% t(A))/n * cfr.fisher)) 
+ICT2
+
+```
+
+# Point b
+```{r echo = FALSE} 
+linear_comb <- + df[2] + df[3] - 0.2 * df[1]
+my_alternative<-'greater'
+myconfidencelevel<-1-alpha
+mu0<-0 
+t.test(linear_comb, alternative = my_alternative,  
+       mu = mu0, conf.level = myconfidencelevel )
+```
+
+```{r include = FALSE}
+# Questo tipo di cella viene eseguita ma nè il suo output, nè il suo codice vengono mostrati
+
+```
+
+
+

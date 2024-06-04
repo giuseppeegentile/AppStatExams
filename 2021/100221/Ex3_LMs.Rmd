@@ -1,0 +1,125 @@
+---
+title: "CODICEPERSONA_PROBLEMA"
+author: "Marco Scarpelli"
+date: "DATA"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+rm(list=ls())
+graphics.off()
+
+library(MASS)
+library(car)
+library(rgl)   #3D plots
+library(leaps) #best subset selection
+library(tree)  #decision trees
+library(corrplot) #correlation
+library(glmnet)
+
+#data <- read.table('NOME FILE', header=T)
+```
+# Print dataframe
+```{r echo = FALSE} 
+# Questa cella viene eseguita e viene mostrato il suo output ma non il codice.
+
+df<-read.table('landslides.txt', header=T)
+head(df)
+dim(df)
+
+```
+# Point a
+```{r echo = FALSE} 
+fm <- lm(rate  ~ rain + hardness + coarse + fine
+, data=df) #+ ... + regressor(r+1)) 
+summary(fm)
+coefficients(fm)
+```
+Our assumptions are that the residuals have 0 mean and are homoscedastic. Let us check for their Gaussianity:
+```{r echo = FALSE} 
+shapiro.test(residuals(fm))
+
+par(mfrow=c(2,2))
+plot(fm)
+par(mfrow=c(1,1))
+```
+
+Furthermore, we can see that the Q-Q plot follows the line closely enough, and all points on the residual-leverage plot are within Cook's distance.
+
+Let us also check the variance inflation factor:
+```{r echo = FALSE} 
+vif(fm)
+```
+where we can see that all parameters are well below 5 and especially 10.
+
+# Point b
+From the summary, we can see that the variable `hardness` is strongly not significant for our model. We will remove it:
+```{r echo = FALSE} 
+fm2 <- lm(rate  ~ rain + coarse + fine
+, data=df) #+ ... + regressor(r+1)) 
+summary(fm2)
+coefficients(fm2)
+```
+where we can see that now all parameters seem to be significant for our model. Let us check whether the two models are equivalent:
+```{r echo = FALSE} 
+anova(fm,fm2)
+```
+According to the output's p-value (0.81), the two models perform equal predictions.
+
+# Point c
+```{r echo = FALSE} 
+C=rbind(c(0,0,1,-8))
+hyp0<-c(0)
+
+linearHypothesis(fm2, C, hyp0) 
+```
+The null hypothesis is thus proven; we can update the model dataframe with a new column to account for this.
+
+## Attempt 1
+> Dubbio: qui secondo me avrebbe senso creare un nuovo dato nel seguente modo ed usare questo nuovo modello; l'altra soluzione è togliere coarse completamente e lasciare solo fine, ma secondo me non ha troppo senso.
+
+The new column will contain the sum of coarse and 2$\times$fine.
+
+```{r echo = FALSE} 
+#df$coarse_new <- 2*df$fine + df$coarse
+fm3 <- lm(rate  ~ rain + coarse + fine, data=df)
+summary(fm3)
+coefficients(fm3)
+```
+
+
+Let us check this w.r.t. the other models:
+```{r echo = FALSE} 
+anova(fm,fm2,fm3)
+```
+
+This new model is a bit different from the others.
+
+## Attempt 2
+We will remove `coarse`.
+```{r echo = FALSE} 
+#df$coarse_new <- 2*df$fine + df$coarse
+fm3.2 <- lm(rate  ~ rain + fine, data=df)
+summary(fm3.2)
+coefficients(fm3.2)
+```
+
+
+Let us check this w.r.t. the other models:
+```{r echo = FALSE} 
+anova(fm,fm2,fm3.2)
+```
+
+This new model is a bit different from the others.
+
+# Point d
+```{r echo = FALSE} 
+Z0.new <- data.frame(rain=700, hardness=5, coarse=10, fine=8)
+alpha.pred <- 0.99
+Conf <- predict(fm3.2, Z0.new, 
+                interval='confidence', level=alpha.pred)  
+t(Conf) # fit is the first value!
+
+```
