@@ -32,15 +32,18 @@ coefficients(fm)
 
 
 # we can remove only hardness, is not influential
-fm <- lm(y ~ rain + coarse + fine,data=data)
-summary(fm) 
+fm.orig <- lm(y ~ rain + coarse + fine,data=data)
+summary(fm.orig) 
 
-
-linearHypothesis(fm, rbind(c(0,0,1,-2)), c(0))
+vif(fm.orig)
+linearHypothesis(fm.orig, rbind(c(0,0,1,-2)), c(0))
 # can't reject
 # -> coarse = 2*fine -> posso togliere coarse, e considerare 3*fine (?)
-fm <- lm(y ~ rain + I(3*fine), data=data)
+fm <- lm(y ~ rain + coarse:I(3*fine), data=data)
 summary(fm)
+
+AIC(fm.orig)
+AIC(fm)
 
 z0   <- data.frame(rain=700, coarse=10, fine=8)
 predict(fm, z0)
@@ -49,3 +52,9 @@ alpha=0.01
 Conf <- predict(fm, z0, interval='confidence', level=1-alpha)  
 Conf
 # point estimate is 30.03895
+
+
+
+
+
+

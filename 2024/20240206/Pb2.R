@@ -57,9 +57,6 @@ data.feats <- data[,1:4]
   mvn(data[which(data$group == levels(groups.name)[2]), 1:dim(data.feats)[2]])$multivariateNormality
   # we can't reject normality at 1%
   
-  # var.test is used instead of bartlett.test when there are only 2 groups
-  # var.test(data.reduced[A,1], data.reduced[B,1])
-  bartlett.test(data.feats[i1,], data.feats[i2,])
   
   S1 <- cov(data.feats[i1,])
   S2 <- cov(data.feats[i2,])
@@ -81,10 +78,10 @@ data.feats <- data[,1:4]
 # covariance matrix..pval is too low therefore we proceed with QDA
 
 
-qda.data <- qda(data.reduced, groups.name, prior=prior.c)
+qda.data <- qda(data.feats, groups.name, prior=prior.c)
 qda.data
 {
-  inference_train <- predict(qda.data, data.reduced)
+  inference_train <- predict(qda.data, data.feats)
   prior
   G <- g
   misc <- table(class.true=groups.name, class.assigned=inference_train$class)
@@ -97,8 +94,8 @@ qda.data
   # Leave One Out CV: specify priors accordingly in the for loop!
   errors_CV <- 0
   for(i in 1:dim(data)[1]){
-    QdaCV.i <- qda(data.reduced[-i,], groups.name[-i], prior=prior)
-    errors_CV <- errors_CV + as.numeric(predict(QdaCV.i,data.reduced[i,])$class != groups.name[i])
+    QdaCV.i <- lda(data.feats[-i,], groups.name[-i], prior=prior)
+    errors_CV <- errors_CV + as.numeric(predict(QdaCV.i,data.feats[i,])$class != groups.name[i])
   }
   AERCV   <- sum(errors_CV)/length(groups.name)
   AERCV # typically higher than APER, more accurate
@@ -119,13 +116,13 @@ AERCV
 # to estimate Spooled. 
 
 # Proof also with LDA (exercise purpose, wouldn't have done in exam)
-lda.data <- lda(data.reduced, groups.name,prior=prior.c) # add priors
+lda.data <- lda(data.feats, groups.name,prior=prior.c) # add priors
 lda.data
 
 
 # APER
 {
-  inference_train <- predict(lda.data, data.reduced)
+  inference_train <- predict(lda.data, data.feats)
   names(inference_train)
   G <- g
   misc <- table(class.true=groups.name, class.assigned=inference_train$class)
@@ -136,7 +133,7 @@ lda.data
 }
 
 
-LdaCV.s <- lda(data.reduced, groups.name, prior=prior.c, CV=T)
+LdaCV.s <- lda(data.feats, groups.name, prior=prior.c, CV=T)
 table(class.true=groups.name, class.assignedCV=LdaCV.s$class)
 
 # Upcoming event will use 1000 observations, calculate the budget
@@ -148,9 +145,9 @@ table(class.true=groups.name, class.assignedCV=LdaCV.s$class)
   FN <- 0  # False Negatives
   
   # Perform LOOCV
-  for(i in 1:nrow(data.reduced)) {
-    LdaCV.i <- lda(data.reduced[-i,], groups.name[-i], prior=prior.c)
-    prediction <- predict(LdaCV.i, data.reduced[i,])$class
+  for(i in 1:nrow(data.feats)) {
+    LdaCV.i <- lda(data.feats[-i,], groups.name[-i], prior=prior.c)
+    prediction <- predict(LdaCV.i, data.feats[i,])$class
     true_label <- groups.name[i]
     
     if(prediction == true_label && true_label == "low") {
@@ -190,14 +187,16 @@ table(class.true=groups.name, class.assignedCV=LdaCV.s$class)
 }
 
 # economic saving
-500*1000 - budget
+# "how much money do we need to have in order to perform the lab tests?"
+# Instead, if the meaning was: "what will be the average economic loss?", I would have removed the TP part
+prev_strategy_cost <- total_products * cost_per_test
+cur_strategy_cost <- (FP / (TN + FP)) * total_products * pt * c.ft + (FN / (TP + FN)) * total_products * pf * c.tf
+
+rbind("Savings", prev_strategy_cost - cur_strategy_cost)
 
 
-
-
-
-
-
+# Economic loss of the classifier
+(c.ft*pt*FP/(FP+TP) + c.tf*FN/(FN+TP))
 
 
 
