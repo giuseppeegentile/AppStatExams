@@ -93,7 +93,7 @@ ICT2
 
 ```
 
-# Point b
+# Point c
 ```{r echo = FALSE} 
 linear_comb <- + df[2] + df[3] - 0.2 * df[1]
 my_alternative<-'greater'
