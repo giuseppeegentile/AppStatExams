@@ -1,0 +1,146 @@
+---
+title: "Exam: 2021/06/18"
+author: "Marco Scarpelli"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+rm(list=ls())
+graphics.off()
+
+library(MVN)
+library(car)
+library(heplots)
+
+df <- read.table('holiday.txt', header=T)
+```
+
+# Dataset exploration
+```{r echo = FALSE}
+head(df)
+
+n<-dim(data)[1]
+
+p<-dim(data)[2]
+
+predicted_v <- df$price
+
+factor_1    <- factor(df$location)
+factor_2    <- factor(df$type)
+combined_factors<-(factor_1:factor_2)
+comb_levels<-levels(combined_factors)
+
+g1 <- length(levels(factor_1))
+g2 <- length(levels(factor_2))
+```
+
+# Point A
+Assumptions: all data belonging to each combination of factors is univariate Gaussian.
+
+Here, we will choose a p-value that is 5% divided by the amount of combined factors:
+```{r echo = FALSE} 
+global_alpha <- 0.05 / length(comb_levels)
+global_alpha
+```
+
+p-values for Gaussianity:
+```{r echo = FALSE} 
+Ps<-NULL
+for (i in 1:length(comb_levels))  #for each level of each possible combination of factors level
+    Ps <- c(Ps, shapiro.test(predicted_v[ combined_factors==comb_levels[i] ])$p) 
+data.frame(Ps)
+```
+
+We accept Gaussianity at every level with large confidence.
+
+We will now check that they have the same covariance structure. We can use Bartlett's test, keeping in mind that it fill fail easily if the data is not Gaussian enough:
+```{r echo = FALSE} 
+bartlett.test(predicted_v, combined_factors)
+```
+The test succeeds, so we may proceed.
+
+## Complete ANOVA model
+```{r echo = FALSE} 
+fit.aov2.complete <- aov(predicted_v ~ factor_1 + factor_2 + factor_1:factor_2)
+
+summary.aov(fit.aov2.complete)
+```
+
+# Point B
+From the last summary we can see that the interaction has low significance; we will now use an additive model and figure out whether the first factor (location) still has low significance.
+```{r echo = FALSE} 
+fit.aov2.additive <- aov(predicted_v ~ factor_1 + factor_2)
+
+summary.aov(fit.aov2.additive)
+```
+
+Since the first factor has a high p-value, we will remove it too:
+```{r echo = FALSE} 
+fit.aov2.single <- aov(predicted_v ~ factor_2)
+
+summary.aov(fit.aov2.single)
+```
+
+Let us verify this model's assumptions; again, Gaussianity and same covariance structure. 
+
+p-values for Gaussianity, keeping in mind that now alpha is divided by the 3 levels of factor 2:
+```{r echo = FALSE} 
+factor_v<-factor_2
+g_rem<-g2
+Ps <- NULL
+for (i in 1:g_rem)  #for each treatment level
+  Ps <- c(Ps, shapiro.test(predicted_v[ factor_v==levels(factor_v)[i] ])$p) 
+
+
+data.frame(Ps)
+```
+
+Covariance structure:
+```{r echo = FALSE} 
+bartlett.test(predicted_v, factor_v)
+```
+
+Both tests are OK.
+
+# Point C
+```{r echo = FALSE} 
+#Computing the means organized per factors
+M            <-  mean(predicted_v)
+Mfactor2     <-  tapply(predicted_v, factor_2, mean)
+beta<-Mfactor2-M
+
+# Print
+c('Mean'=M, 'beta'=beta)
+```
+
+# Point D
+```{r echo = FALSE} 
+k <- g2
+alpha <- 0.05
+ng <- table(factor_v)  #levels of remained factor
+Mediag  <- tapply(predicted_v, factor_v, mean)
+n <- dim(df)[1]
+dof <- fit.aov2.single$df
+Spooled <- sum(fit.aov2.single$residuals^2)/dof
+
+ICrange=NULL
+rowNamesVec=NULL
+for(i in 1:(g_rem-1)) {
+  rowname.first=levels(factor_v)[i]
+  for(j in (i+1):g_rem) {
+    ICrange=rbind(ICrange, as.numeric(c(Mediag[i]-Mediag[j] - qt(1-alpha/(2*k), dof) * sqrt( Spooled * ( 1/ng[i] + 1/ng[j] )),
+                                       Mediag[i]-Mediag[j] + qt(1-alpha/(2*k), dof) * sqrt( Spooled * ( 1/ng[i] + 1/ng[j] )))))
+    
+    rowNamesVec = rbind(rowNamesVec, paste(rowname.first, levels(factor_v)[j], sep="-"))
+    
+  }
+}
+colnames(ICrange)<-c('Inf','Sup')
+rownames(ICrange)<-rowNamesVec
+ICrange
+```
+
+At a global level of 95%, it seems that there is always a difference between Bed&Breakfast and Hotels; the other confidence intervals include 0, so we cannot rule out that their differences will be 0.
