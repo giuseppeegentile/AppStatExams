@@ -1,0 +1,118 @@
+---
+title: "Exam: 2021/06/18"
+author: "Marco Scarpelli"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+rm(list=ls())
+graphics.off()
+
+library(mvtnorm)
+library(car)
+library(rgl)
+library(MVN)
+
+df.complete <- read.table('beans.txt', header=T)
+```
+
+# Dataset exploration
+
+```{r echo = FALSE}
+head(df.complete)
+```
+
+Removing non-quantitative variables:
+
+```{r echo = FALSE}
+df <- df.complete[,1:8]
+head(df)
+```
+
+# Point A
+
+Already from the dataset we can see that different variables have different magnitudes, and by a lot. We will now scale the data:
+
+```{r echo = FALSE}
+mydf <- scale(df) # per scalare i dati
+head(mydf)
+```
+
+# Point B
+
+We perform the PCA and report the results:
+
+```{r echo = FALSE}
+pca.df <- princomp(mydf, scores=T)
+summary(pca.df)
+```
+
+and plot:
+
+```{r echo = FALSE}
+n.PCs<- 2
+par(mfrow=c(2,n.PCs))
+for(i in 1:n.PCs) 
+  barplot(pca.df$loadings[,i], ylim = c(-1, 1), main=paste("PC",i), 
+          cex.axis = 0.4, las=2) #to change dimension of labels
+par(mfrow=c(1,1))
+```
+
+The first component seems to be related to the general measurements of the grain of rice, i.e. the component goes in the direction of how big the grain of rice is.
+
+The second component seems to be related to how the grain of rice is ellyptical (or oblong), i.e. it is the contrast between features related to more rounded shapes (i.e. roundess) and more slender ones (i.e. AxisLength and Eccentricity). In fact, we note that contrasted "real-world" features are the opposite of one another, like `MajorAxisLength` and `MinorAxisLength`, and `Eccentricity` and `Roundness`.
+
+We report the scatter plot:
+
+```{r echo = FALSE}
+scores.df <- pca.df$scores
+group <- factor(df.complete$Type)
+col.lab<-factor(as.numeric(group))
+
+plot(scores.df[,1:2], col=col.lab, main="scores along the first two PCs", pch=19)
+abline(h=0, v=0, lty=2, col='grey')
+legend("topright", legend=c(levels(group)), col=levels(col.lab), lty=1) #only in plot
+```
+
+We can see that beans of "Cannellini" type have a low score on the first PC: this means that their dimension is generally smaller than that of the others. Then, beans of the "adzuki" type are generally the biggest even if they do not differ too much from "black-eyed" beans. The three types of beans are generally centered around 0 for the second PC, but the "adzuki" ones tend to be a little higher on average: we can then expect that generally, this type of bean will exhibit more oblong shapes.
+
+# Point C
+The expression for this ellipse is:
+$$
+\left\{ m \in R^2 \middle| n\left(\overline{X}-m\right)^T \mathcal{S}^{-1} \left(\overline{X}-m\right) < F^* \right\}
+$$
+with $F^*$ equal to:
+$$ \frac{(n-1)p}{n-p}F(1-\alpha,p,n-p) $$
+
+We check the normality of the resulting data:
+
+```{r echo = FALSE}
+p <- 2
+n <- dim(df)[1]
+vector.pcs <- scores.df[which(group=="cannellini"),1:2]
+plot(vector.pcs)
+mvn(vector.pcs)$multivariateNormality
+```
+
+The resulting data is not Gaussian! It seems that it comes from a uniform distribution.
+
+
+```{r echo = FALSE}
+p <- 2
+n <- dim(df)[1]
+vector.pcs <- scores.df[,1:2]
+alpha <- 0.05
+cfr.fisher <- ((n-1)*p/(n-p))*qf(1-alpha,p,n-p)
+
+x.mean    <- colMeans(vector.pcs)
+x.cov    <- cov(vector.pcs)
+x.invcov <- solve(x.cov)
+
+IC.T2 <- cbind(inf = x.mean - sqrt(cfr.fisher*diag(x.cov)/n),
+            center = x.mean, 
+            sup = x.mean + sqrt(cfr.fisher*diag(x.cov)/n))
+IC.T2
+```
