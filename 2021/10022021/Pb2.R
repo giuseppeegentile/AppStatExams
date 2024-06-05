@@ -50,15 +50,19 @@ plot(data, col=cluster.ea +1, pch=19, main='Average linkage')
 
 # Size of clusters
 {
-  length(which(cluster.ea ==1))
-  length(which(cluster.ea ==2))
-  length(which(cluster.ea ==3))
+  length(which(cluster.ea ==1)) #42
+  length(which(cluster.ea ==2)) # 21
+  length(which(cluster.ea ==3)) #18
 }
 # Centroid of the clusters
 {
   colMeans(data[cluster.ea == 1, ])
   colMeans(data[cluster.ea == 2, ])
   colMeans(data[cluster.ea == 3, ])
+ # major_axis eccentricity 
+ # 0.6205476    0.9041190 
+ # 0.7118571    0.7036667 
+ # 0.4312778    0.7709444 
   
   plot(data, col=cluster.ea +1, pch=19, main='Complete linkage')
   points(colMeans(data[cluster.ea == 1, ])[1],colMeans(data[cluster.ea == 1, ])[2], pch=17,col="black")
@@ -146,6 +150,18 @@ plot(data, col=cluster.ea +1, pch=19, main='Average linkage')
   Bf1
   Bf2
   Bf3
+  # >   Bf1
+  # inf    center        sup
+  # IC.BF.feature_1 0.578068914 0.6205476 0.66302632
+  # var             0.005872386 0.0098604 0.01919633
+  # >   Bf2
+  # inf      center         sup
+  # IC.BF.feature_1 0.6898297338 0.711857143 0.733884552
+  # var             0.0005855364 0.001189229 0.003286645
+  # >   Bf3
+  # major_axis  major_axis  major_axis
+  # IC.BF.feature_1 0.4083724058 0.431277778 0.454183150
+  # var             0.0004965239 0.001060565 0.003261042
   
   res1= mvn(data1)
   res1$multivariateNormality

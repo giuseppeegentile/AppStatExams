@@ -11,6 +11,8 @@ library(MVN)
 # high = true
 # low = false (have quality issue)
 
+true <- "high"
+false <- "low"
 {
   # misclassification costs
   c.tf <- 100000   # predict as high when they are low: cost 100000$
@@ -136,6 +138,28 @@ lda.data
 LdaCV.s <- lda(data.feats, groups.name, prior=prior.c, CV=T)
 table(class.true=groups.name, class.assignedCV=LdaCV.s$class)
 
+
+
+# With custom priors
+{
+  errors_CV <- 0
+  miscCV <- cbind(0, 0, 0, 0)
+  colnames(miscCV) <- c("TN", "FN", "FP", "TP")
+  for(i in 1:dim(data)[1]){
+    QdaCV.i <- qda(data.feats[-i,], groups.name[-i], prior=prior.c)
+    errors_CV <- errors_CV + as.numeric(predict(QdaCV.i, data.feats[i,])$class != groups.name[i])
+    for(j in 1:2)
+      for(k in 1:2)
+        if (predict(QdaCV.i, data.feats[i, ])$class == levels(groups.name)[j] && groups.name[i] == levels(groups.name)[k]) 
+          miscCV[j*k+as.numeric(j == 2 && k == 1)] <- miscCV[j*k+as.numeric(j == 2 && k == 1)] + 1
+  }
+  AERCV <- sum(errors_CV) / length(groups.name)
+  AERCV
+  
+}
+
+
+
 # Upcoming event will use 1000 observations, calculate the budget
 {
   total_products <- 1000
@@ -197,6 +221,16 @@ rbind("Savings", prev_strategy_cost - cur_strategy_cost)
 
 # Economic loss of the classifier
 (c.ft*pt*FP/(FP+TP) + c.tf*FN/(FN+TP))
+
+
+
+
+
+
+
+
+
+
 
 
 

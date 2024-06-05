@@ -118,14 +118,28 @@ par(mfrow=c(1,1))
 
 
 
-# AER CV with priors
-# always use the priors without the cost information!!!
+
+# With custom priors
 {
-  qdaCV <- qda(data.feats, data$group, CV=TRUE, prior = prior) 
-  misc <- table(class.true=data$group, class.assignedCV=qdaCV$class)
-  AERCV  <- misc[1,2]*prior[1]/sum(misc[1,]) + misc[2,1]*prior[2]/sum(misc[2,])
+  errors_CV <- 0
+  miscCV <- cbind(0, 0, 0, 0)
+  colnames(miscCV) <- c("TN", "FN", "FP", "TP")
+  for(i in 1:dim(data)[1]){
+    QdaCV.i <- qda(data.feats[-i,], groups.name[-i], prior=prior)
+    errors_CV <- errors_CV + as.numeric(predict(QdaCV.i, data.feats[i,])$class != groups.name[i])
+    for(j in 1:2)
+      for(k in 1:2)
+        if (predict(QdaCV.i, data.feats[i, ])$class == levels(groups.name)[j] && groups.name[i] == levels(groups.name)[k]) 
+          miscCV[j*k+as.numeric(j == 2 && k == 1)] <- miscCV[j*k+as.numeric(j == 2 && k == 1)] + 1
+  }
+  AERCV <- sum(errors_CV) / length(groups.name)
   AERCV
+  
 }
+
+
+
+
 
 
 # Predict on new entry
