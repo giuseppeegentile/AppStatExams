@@ -1,0 +1,141 @@
+---
+title: "2021/01/20 Ex.2"
+author: "Marco Scarpelli"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+rm(list=ls())
+graphics.off()
+
+library(MASS)
+library(car)
+library(rgl)   #3D plots
+library(leaps) #best subset selection
+library(tree)  #decision trees
+library(corrplot) #correlation
+library(glmnet)
+
+df <- read.table('bikes.txt', header=T)
+```
+
+# Dataset exploration
+```{r echo = FALSE} 
+head(df)
+dim(df)
+```
+# Point a
+```{r echo = FALSE} 
+df$day <- factor(df$day)
+df$dummy<-ifelse(df$day==factor(df$day)[1],1,0)
+
+
+fm <- lm(bike_count ~ dummy + mean_temp:dummy + mean_wind:dummy + mean_temp + mean_wind, data=df)
+summary(fm)
+```
+The parameters are:
+```{r echo = FALSE} 
+coefs<-coefficients(fm)
+sigmasq<-sum(residuals(fm)^2)/fm$df
+coefs
+sigmasq
+```
+
+# Point b
+## Assumptions on the model
+We assume homoscedastic residuals:
+
+```{r echo = FALSE} 
+par(mfrow=c(2,2))
+plot(fm)
+par(mfrow=c(1,1))
+shapiro.test(residuals(fm))
+```
+We can see that the Gaussianity test succeds; furthermore, the plots show that all points are within Cook's distance, the Q-Q plot follows the line closely enough and the residuals exhibit no clear patttern.
+
+## New model
+From the summary above, it seems that only `mean_wind` should be removed from the model, and it also seems that holiday information is not signficant (but we should verify that by removing only one thing at a time. However, there is a debate on whether the exam text is asking to remove both `mean_wind` and `mean_temp`. Here, I will remove both.
+
+### Weather info
+We will remove weather information completely from the model and run `anova` on the old model and new model.
+```{r echo = FALSE} 
+fm2 <- lm(bike_count ~ dummy, data=df)
+summary(fm2)
+```
+ANOVA:
+```{r echo = FALSE} 
+anova(fm,fm2)
+```
+The two models are different and the RSS of the second model is way higher, so we keep the first model. This means that weather info has some play in the prediction.
+
+### Holiday info
+We will remove all holiday info.
+```{r echo = FALSE} 
+fm3 <- lm(bike_count ~ mean_temp + mean_wind, data=df)
+summary(fm3)
+```
+ANOVA:
+```{r echo = FALSE} 
+anova(fm,fm3)
+```
+
+Again, the complete model was better. The holiday has some play in the prediction.
+
+# Point c
+From what we already stated in point B, we will first remove `mean_wind` since it seems to have low significance.
+```{r echo = FALSE} 
+fm3 <- lm(bike_count ~ dummy + mean_temp:dummy + mean_temp, data=df)
+summary(fm3)
+```
+
+We can remove the interaction between the dummy and the mean temperature:
+```{r echo = FALSE} 
+fm4 <- lm(bike_count ~ dummy + mean_temp, data=df)
+summary(fm4)
+```
+
+Let us check with ANOVA:
+```{r echo = FALSE} 
+anova(fm,fm4)
+```
+
+The parameters are:
+```{r echo = FALSE} 
+coefs<-coefficients(fm4)
+sigmasq<-sum(residuals(fm4)^2)/fm$df
+coefs
+sigmasq
+```
+
+Diagnostics:
+
+```{r echo = FALSE} 
+par(mfrow=c(2,2))
+plot(fm4)
+par(mfrow=c(1,1))
+shapiro.test(residuals(fm4))
+```
+# Point D
+Confidence intervals:
+```{r echo = FALSE} 
+Z0.new <- data.frame(mean_temp=2, mean_wind=3, day="Holiday")
+Z0.new$dummy<-ifelse(Z0.new$day==factor(df$day)[1],1,0)
+
+globalAlpha <- 0.05
+
+Conf <- predict(fm4, Z0.new, 
+                interval='confidence', level=1-globalAlpha)  
+t(Conf) # fit is the first value!
+```
+Prediction:
+```{r echo = FALSE} 
+
+# Prediction (for the value of a new observation)
+Pred <- predict(fm4, Z0.new, 
+                interval='prediction', level=1-globalAlpha)  
+t(Pred) # fit is the first value!
+
+```
