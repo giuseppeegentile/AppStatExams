@@ -7,8 +7,8 @@ data <- read.table("diet.txt", header=TRUE)
 attach(data)
 
 features <- data[,1:2]
-vitamin <- factor(data$vitamin, labels=c('TRUE', 'FALSE'))
-vegetarian <- factor(data$vegetarian, labels=c('TRUE', 'FALSE'))
+vitamin <- factor(data$vitamin, labels=c('FALSE','TRUE'))
+vegetarian <- factor(data$vegetarian, labels=c('FALSE','TRUE'))
 
 VitVeg <- factor(paste(vitamin,vegetarian, sep=' '))
 
