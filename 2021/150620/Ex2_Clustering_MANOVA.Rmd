@@ -1,0 +1,183 @@
+---
+title: "Exam: 2021/06/18"
+author: "Marco Scarpelli"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+rm(list=ls())
+graphics.off()
+
+library(MASS)
+library(car)
+library(rgl)   #3D plots
+library(leaps) #best subset selection
+library(tree)  #decision trees
+library(corrplot) #correlation
+library(glmnet)
+library(mvnormtest)
+library(MVN)
+library(heplots)
+library(ggplot2)
+
+df <- read.table('stoneflakes.txt', header=T)
+```
+
+# Dataset exploration
+
+```{r echo = FALSE}
+head(df)
+plot(df,main='', pch=19) # plot if p=1 or 2, pairs otherwise
+```
+
+```{r echo = FALSE}
+n <- dim(df)[1]
+p <- dim(df)[2]
+x.mean    <- colMeans(df)
+x.cov    <- cov(df)
+x.invcov <- solve(x.cov)
+
+dist.matrix <- dist(df, method='euclidean')
+```
+
+# Point A
+We report the dissimilarity matrix:
+
+```{r echo = FALSE}
+par(mfrow=c(1,1)) # Se vogliamo plottare più metriche una a fianco all'altra
+image(1:n, 1:n, as.matrix(dist.matrix), main = "Dissimilarity matrix", asp = 1, xlab = "i", ylab = "j", ylim = rev(range(1:n)))
+par(mfrow=c(1,1))
+
+hclust.output <- hclust(dist.matrix, method = "ward.D2")
+
+```
+
+We run the clustering algorithm and provide the dendrogram. From it, it seems that the correct amount of clusters is 3, since there is a great height since the two-to-three split and the next one. We hence highlight the cut at three clusters:
+
+```{r echo = FALSE}
+# plot dendrogram
+plot(hclust.output, main = "Dendrogram", 
+     hang = -0.1, xlab = "", labels = F, cex = 0.6, sub = "")
+
+k <- 3
+rect.hclust(hclust.output, k = k)
+```
+
+We report the resulting clustering:
+
+```{r echo = FALSE}
+clusters <- cutree(hclust.output, k = k)
+plot(df, col = clusters, pch = 19)
+
+legend('topright', legend=c(levels(factor(clusters))), col = c(levels(factor(clusters))), lty=1)
+```
+And other plots, by cluster:
+
+```{r echo = FALSE}
+factor_v<-factor(clusters)
+data<-df
+n<-dim(data)[1] 
+p<-dim(data)[2]
+g<-length(levels(factor_v))
+
+i1 <- which(factor_v==levels(factor_v)[1])
+i2 <- which(factor_v==levels(factor_v)[2])
+i3 <- which(factor_v==levels(factor_v)[3])
+
+n1 <- length(i1)
+n2 <- length(i2)
+n3 <- length(i3)
+
+par(mfrow=c(1,3))
+yrange=c(min(data),max(data)) # controllare la colonna!
+boxplot(data[i1,], main='Cluster 1', ylim=yrange, col = rainbow(4))
+boxplot(data[i2,], main='Cluster 2', ylim=yrange, col = rainbow(4))
+boxplot(data[i3,], main='Cluster 3',  ylim=yrange, col = rainbow(4))
+```
+
+and feature:
+
+```{r echo = FALSE}
+par(mfrow=c(1,2))
+boxplot(data[,1]~factor_v, main=colnames(df)[1], col = rainbow(3))
+boxplot(data[,2]~factor_v, main=colnames(df)[2], col = rainbow(3))
+par(mfrow=c(1,1))
+```
+
+
+# Point B
+
+Let us check whether the three clusters have the same covariance structure; we will check the residuals after fitting the model. We will check the three covariance matrices and verify that no element on the diagonal is larger than 10 times (10 is specific for MANOVA, usually it is 4) any other element on the diagonals:
+```{r echo = FALSE}
+cov(df[i1,])
+cov(df[i2,])
+cov(df[i3,])
+```
+The test has positive results; we may proceed.
+
+```{r echo = FALSE}
+fit <- manova(as.matrix(data) ~ factor_v)  
+summary.manova(fit,test="Wilks")
+```
+The summary reports that the membership to a cluster does indeed have an effect on the mean features of a stone flake, as the p-value is practically 0.
+
+Let us check whether the residuals are homoscedastic:
+
+```{r echo = FALSE}
+residual_magnitude <- rowSums(residuals(fit)^2)
+
+residual_plot_data <- data.frame(ResidualMagnitude = residual_magnitude, Group = factor_v)
+
+# Load ggplot2 if not already loaded
+
+# Create the plot
+p_magnitude <- ggplot(residual_plot_data, aes(x = Group, y = ResidualMagnitude, color = Group)) +
+  geom_point(alpha = 0.7) +
+  theme_minimal() +
+  labs(title = "Plot of Residual Magnitudes by Group",
+       x = "Cluster",
+       y = "Sum of Squared Residuals") +
+  scale_color_manual(values = c("red", "blue", "green"))
+
+# Display the plot
+print(p_magnitude)
+
+cov(residuals(fit)[i1,])
+cov(residuals(fit)[i2,])
+cov(residuals(fit)[i3,])
+```
+
+The homoscedasticity does not seem to be respected too well.
+
+# Point C
+```{r echo = FALSE}
+alpha <- 0.1
+
+k <- p*g*(g-1)/2
+
+ng<-table(factor_v)
+qT <- qt(1-alpha/(2*k), n-g)
+
+SSres <- summary.manova(fit)$SS$Residuals
+m  <- sapply(data,mean)          # estimated mu
+m1 <- sapply(data[i1,],mean)     # estimated mu.1=mu+tau.1
+m2 <- sapply(data[i2,],mean)     # estimated mu.2=mu+tau.2
+m3 <- sapply(data[i3,],mean)    # estimated mu.3=mu+tau.3
+
+inf12 <- m1-m2 - qT * sqrt( diag(SSres)/(n-g) * (1/n1+1/n2) )
+sup12 <- m1-m2 + qT * sqrt( diag(SSres)/(n-g) * (1/n1+1/n2) )
+inf13 <- m1-m3 - qT * sqrt( diag(SSres)/(n-g) * (1/n1+1/n3) )
+sup13 <- m1-m3 + qT * sqrt( diag(SSres)/(n-g) * (1/n1+1/n3) )
+inf23 <- m2-m3 - qT * sqrt( diag(SSres)/(n-g) * (1/n2+1/n3) )
+sup23 <- m2-m3 + qT * sqrt( diag(SSres)/(n-g) * (1/n2+1/n3) )
+
+CI <- list("diff 1-2"=cbind(inf12, sup12), "diff 2-3"=cbind(inf23, sup23), "diff 1-3"=cbind(inf13, sup13) )
+
+CI
+
+```
+
+Only the interval on length between the first and second clusters constains 0, which means that these two clusters could likely have the same mean. All other combinations of clusters have means that differ, some with more confidence than others.

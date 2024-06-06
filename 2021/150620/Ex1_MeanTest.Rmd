@@ -1,0 +1,113 @@
+---
+title: "Exam: 2021/06/18"
+author: "Marco Scarpelli"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+rm(list=ls())
+graphics.off()
+
+library(MASS)
+library(car)
+library(rgl)   #3D plots
+library(leaps) #best subset selection
+library(tree)  #decision trees
+library(corrplot) #correlation
+library(glmnet)
+library(mvnormtest)
+library(MVN)
+
+
+df <- read.table('pollution.txt', header=T)
+```
+
+# Dataset exploration
+
+```{r echo = FALSE}
+head(df)
+```
+
+```{r echo = FALSE}
+n <- dim(df)[1]
+p <- dim(df)[2]
+x.mean    <- colMeans(df)
+x.cov    <- cov(df)
+x.invcov <- solve(x.cov)
+```
+
+# Point A
+We verify that the data is multivariate Gaussian:
+```{r echo = FALSE}
+mvn(df)$multivariateNormality
+```
+The data is Gaussian. Let verify the hypothesis:
+```{r echo = FALSE}
+mu0<- c(50,50)
+alpha<-0.05
+
+cfr.fisher <- ((n-1)*p/(n-p))*qf(1-alpha,p,n-p)
+x.T2 <- n * t(x.mean-mu0) %*% x.invcov %*% (x.mean-mu0) 
+x.T2 < cfr.fisher
+P <- 1-pf(x.T2*(n-p)/((n-1)*p), p, n-p)
+P
+```
+This means that the mean is significantly different from (50, 50).
+
+# Point B
+The expression for this ellipse is:
+$$
+\left\{ m \in R^2 \middle| n\left(\overline{X}-m\right)^T \mathcal{S}^{-1} \left(\overline{X}-m\right) < F^* \right\}
+$$
+with $F^*$ equal to:
+$$ \frac{(n-1)p}{n-p}F(1-\alpha,p,n-p) $$
+We all requested data:
+```{r echo = FALSE}
+direction.axes<-eigen(x.cov)$vector
+radius<-sqrt(cfr.fisher)
+length.semi.axes<-radius*sqrt(eigen(x.cov/n)$values)
+
+c(mean=x.mean, semi.axes.length=length.semi.axes,radius=radius)
+```
+We also plot the confidence region:
+
+```{r echo = FALSE}
+plot(df, asp = 1, main='Confidence region for the mean',xlab=colnames(df)[1],ylab=colnames(df)[2], cex=.4)
+
+ellipse(center=x.mean, shape= x.cov/n, radius=sqrt(cfr.fisher), col = 'red', lty = 1, lwd=2, center.cex=1)
+```
+
+# Plot C
+We plot the confidence region and highlight the point at (50, 50) in green:
+
+```{r echo = FALSE}
+plot(df, asp = 1, main='Confidence region for the mean',xlab=colnames(df)[1],ylab=colnames(df)[2], cex=.4)
+
+ellipse(center=x.mean, shape= x.cov/n, radius=sqrt(cfr.fisher), col = 'red', lty = 1, lwd=2, center.cex=1)
+points(50,50,col='green',pch=19)
+```
+We can see that the point lies well outside the confidence region, in accordance with our statistical test.
+
+# Plot D
+Confidence intervals, with plot:
+
+```{r echo = FALSE}
+cfr.fisher <- ((n-1)*p/(n-p))*qf(1-alpha,p,n-p)
+
+IC.T2 <- cbind(inf = x.mean - sqrt(cfr.fisher*diag(x.cov)/n),
+            center = x.mean, 
+            sup = x.mean + sqrt(cfr.fisher*diag(x.cov)/n))
+IC.T2
+
+#Plot - p=2
+#plot (df, xlab='',ylab='',main='T2 simultaneous confidence intervals')
+plot(df)
+points(x.mean[1],x.mean[2], col='red') #sample mean
+abline(v = IC.T2[1,1], col='orange', lwd=1, lty=2)
+abline(v = IC.T2[1,3], col='orange', lwd=1, lty=2)
+abline(h = IC.T2[2,1], col='orange', lwd=1, lty=2)
+abline(h = IC.T2[2,3], col='orange', lwd=1, lty=2)
+```
