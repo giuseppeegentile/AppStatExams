@@ -17,13 +17,13 @@ library(lattice)
 options(rgl.printRglwidget = TRUE)
 
 data <- read.table("asthma.txt", header = T)
-# head(data)
+head(data)
 
 
 # a) ----------------------------------------------------------------------
 
 m0 <- lm(asthma ~ urban + age + pollution + sunny + income + education, data = data)
-# summary(m0)
+summary(m0)
 
 rbind("Sigma", sqrt(sum((m0$residuals)^2)/m0$df))
 print("Coefficients"); m0$coefficients
@@ -40,13 +40,12 @@ shapiro.test(residuals(m0))
 # b) ----------------------------------------------------------------------
 
 alpha = 0.1
-print("90% confidence interval for age coefficient"); confint(m0, level = 1-alpha)[3, ]
+print("p-value for the significance of the age coefficient"); summary(m0)$coefficients["age", "Pr(>|t|)"]
 
 # No, at 90% confidence level we can't affirm age has a positive effect on asthma prevalence
-# (we would at 80%)
 
 alpha = 0.05
-print("95% confidence interval for urbanYes coefficient"); confint(m0, level = 1-alpha)[2, ]
+print("95% confidence interval for urbanYes coefficient"); confint(m0, level = 1-alpha, "urbanYes")
 
 
 # c) ----------------------------------------------------------------------
@@ -60,7 +59,10 @@ summary(m0_red)
 m0_red <- lm(asthma ~ pollution + income + education, data = data)
 summary(m0_red)
 
-m0_red.form <- formula(asthma ~ pollution + income + education)
+m0_red <- lm(asthma ~ pollution + income, data = data)
+summary(m0_red)
+
+m0_red.form <- formula(asthma ~ pollution + income)
 m1 <- gls(m0_red.form, correlation = corCompSymm(form = ~1|region_id), data = data)
 summary(m1)
 
@@ -70,21 +72,10 @@ intervals(m1, which = "var-cov", level = 1-alpha)
 
 # d) ----------------------------------------------------------------------
 
-m2 <- lmer(asthma ~ pollution + income + education + (1|region_id), data = data)
+m2 <- lme(asthma ~ pollution + income, random = ~1|region_id, data = data)
 summary(m2)
 
-sigma2_eps <- as.numeric(get_variance_residual(m2))
-sigma2_b <- as.numeric(get_variance_random(m2))
-
-PVRE <- sigma2_b/(sigma2_b+sigma2_eps)
-PVRE
-
-# The percentage of the region variance out of the total is really high (70%)
-
-dotplot(ranef(m2, condVar=T))
-confint(m2)
-
-VarCorr(m2)
+print("Estimate of the standard deviation of the random intercept and of the error term"); VarCorr(m2)
 
 # Extra -------------------------------------------------------------------
 
