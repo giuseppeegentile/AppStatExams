@@ -1,0 +1,105 @@
+---
+title: "Exam: 2021/06/18"
+author: "Marco Scarpelli"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+rm(list=ls())
+graphics.off()
+
+library(MASS)
+library(car)
+library(rgl)   #3D plots
+library(leaps) #best subset selection
+library(tree)  #decision trees
+library(corrplot) #correlation
+library(glmnet)
+
+df <- read.table('students.txt', header=T)
+```
+
+# Dataset exploration
+
+```{r echo = FALSE}
+head(df)
+```
+
+
+```{r echo = FALSE}
+df$gender <- factor(df$gender)
+#df$dummy<-ifelse(df$gender=='male',1,0)
+```
+
+# Point A
+I'm a bit unsure on why they ask to explicitly encode a dependence for the gender in the intercept;
+if I write `1 + 1:gender + gender`, it means that there is always an interept and there is a contribution
+given by the gender, which is 0 if `gender`; if I just write `gender` it should be exactly the same thing.
+I will write it in the explicit form just to show that I complied.
+
+I think it was a bit of a trap or bad wording and they wrote that we need to have exactly 10 parameters later in the text
+to ensure people would not be fooled.
+
+The model:
+```{r echo = FALSE}
+fm <- lm(watchtv  ~ 1 + 1:gender + gender + age + height + distance + siblings + computertime + exercisehours + musiccds + playgames, data=df)
+summary(fm)
+```
+Residuals; we want them to be Gaussian and homoscedastic.
+```{r echo = FALSE}
+par(mfrow=c(2,2))
+plot(fm)
+par(mfrow=c(1,1))
+shapiro.test(residuals(fm))
+```
+The test for Gaussianity fails; furthermore, we can see that the residuals exhibit a bit of a pattern and one of them
+exceeds Cook's distance.
+
+# Point B
+We report the coefficients:
+```{r echo = FALSE}
+x <- model.matrix(watchtv  ~ 1 + 1:gender + gender + age + height + distance + siblings + computertime + exercisehours + musiccds + playgames, data=df)[,-1]
+y <- df$watchtv
+mylambda <- 0.3
+fit.lasso <- glmnet(x,y, lambda = mylambda)
+fit.lasso$beta 
+```
+# Point C
+```{r echo = FALSE}
+lambda.grid <- seq(0.01, 1, length=100)
+fit.lasso.grid <- glmnet(x,y, lambda = lambda.grid) 
+
+plot(fit.lasso.grid,xvar='lambda',label=TRUE, col = rainbow(dim(x)[2]))
+legend('topright', dimnames(x)[[2]], col =  rainbow(dim(x)[2]), lty=1, cex=1)
+```
+
+We report the best $\lambda$ and the optimal $\lambda$, together with a plot to better understand the result. The black vertical linw is the best $\lambda$.
+
+```{r echo = FALSE}
+set.seed(1) 
+cv.lasso <- cv.glmnet(x,y,lambda=lambda.grid)
+bestlam.lasso <- cv.lasso$lambda.min
+bestlam.lasso
+optlam.lasso <- cv.lasso$lambda.1se
+optlam.lasso
+plot(cv.lasso)
+abline(v=log(bestlam.lasso), lty=1)
+```
+
+We now use the optimal $\lambda$ and report the coefficients:
+```{r echo = FALSE}
+mylambda <- optlam.lasso
+opt.lasso <- glmnet(x,y, lambda = mylambda)
+opt.lasso$beta 
+```
+
+# Point D
+```{r echo = FALSE}
+Z0.new<-data.frame(gender=which(levels(df$gender)=="male"), age=21, height=73, distance=100, siblings=1, computertime=10, exercisehours=2, musiccds=35, playgames=4)
+
+predict(opt.lasso, newx=as.matrix(Z0.new), s=optlam.lasso, type = "response")
+
+```
