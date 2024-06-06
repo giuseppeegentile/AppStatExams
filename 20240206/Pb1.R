@@ -96,6 +96,6 @@ supVeg <- mVegYES - mVegNO + qT * sqrt(diag(W)/(g*b*n-g-b+1) * (1/100+1/100))
 IC2   <- list(VitYes_VitNo=cbind(infVit, supVit), VegYes_VegNo=cbind(infVeg, supVeg))
 IC2
 
-# Vitamins have an effect on pressure ->
-# Vegetarian diet has an effect on cholesterol ->
+# Vitamins have an effect on pressure -> increase in pressure -> wtf
+# Vegetarian diet has an effect on cholesterol -> increase in cholesterol -> wtf
 
