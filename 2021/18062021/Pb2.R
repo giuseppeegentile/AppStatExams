@@ -133,12 +133,12 @@ scores.data <- scores.data[, 1:2]
 cannellini <- scores.data[which(data.label == "cannellini"), ]
 head(cannellini)
 
-D <- cannellini
+D <- data.frame(cannellini)
 n <- dim(D)[1]
 p <- dim(D)[2]
 library(MVN)
 # Assumption: normality for the new dataset (not for the old one!)
-result <- mvn(D)
+result <- mvn()
 result$multivariateNormality
 # we don't have normality
 # T2 Hotelling Test H0:  delta.0 = (0,0)

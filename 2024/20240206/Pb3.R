@@ -98,10 +98,6 @@ confint(lmm1, oldNames=TRUE)
 dotplot(ranef(lmm1))
 
 
-# estimate of the standard deviation of the random intercept
-sd(residuals(lmm1))
-
-# estimate of the standard deviation of the error (?)
-# from summary -> 11.32
+VarCorr(lmm1)
 
 

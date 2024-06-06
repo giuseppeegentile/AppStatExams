@@ -43,7 +43,7 @@ data.ew <- hclust(data.e, method='ward.D2')
   cluster.ew <- cutree(data.ew, k=3) # euclidean-ward
 }
 # MANOVA after clustering: add the grouping to data, then do MANOVA as usual
-data$label <- cluster.ew
+data$label <- factor(cluster.ew)
 
 
 
