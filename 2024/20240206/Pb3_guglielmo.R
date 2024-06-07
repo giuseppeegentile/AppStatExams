@@ -89,8 +89,8 @@ summary(fm12.1)
   significance = 0.99
   intervals(fm12.1, which = "var-cov",level=significance)
   
-  [0.911, 0.985]
-  [11.877, 26.738]
+  #[0.911, 0.985]
+  #[11.877, 26.738]
 }
 
 lmm1 = lmer(y ~ urban + pollution + sunny + income + tobacco + (1|region_id),  
