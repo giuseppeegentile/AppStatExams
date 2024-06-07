@@ -60,6 +60,11 @@ quantile2 <- qt(1-alpha/(2*k), n2-1)
 quantile3 <- qt(1-alpha/(2*k), n3-1)
 quantile4 <- qt(1-alpha/(2*k), n4-1)
 
+# gaussianity assumption
+shapiro.test(bodycirc[cluster.ea==1])
+shapiro.test(bodycirc[cluster.ea==2])
+shapiro.test(bodycirc[cluster.ea==3])
+shapiro.test(bodycirc[cluster.ea==4])
 
 m1 <- mean(bodycirc[cluster.ea==1])
 m2 <- mean(bodycirc[cluster.ea==2])
@@ -95,5 +100,3 @@ BC.mean
 
 BC.var <- rbind(BC1.var, BC2.var, BC3.var, BC4.var)
 BC.var
-
-
