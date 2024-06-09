@@ -93,6 +93,6 @@ P
   IC.T2
   
   sum(Md)/3 #average consumption per working day
-  
+  cbind(sum(IC.T2[,1])/3, sum(IC.T2[,2])/3, sum(IC.T2[,3])/3)
 }
 
