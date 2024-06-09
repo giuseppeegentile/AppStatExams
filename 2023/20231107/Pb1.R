@@ -5,15 +5,7 @@
 rm(list = ls())
 graphics.off()
 
-options(rgl.printRglwidget = TRUE)
-
-library(mvtnorm)
 library(MVN)
-library(rgl)
-library(car)
-library(dbscan)
-library(cluster)
-library(fields)
 
 data <- read.table('kapok.txt', header = T)
 head(data)
@@ -35,13 +27,56 @@ table(cluster)
 plot(data, col=cluster+1, pch=16, lwd=2)
 
 means <- NULL
-for(k in 1:4)
+for(k in 1:length(unique(cluster)))
 {
   means = rbind(means, sapply(data[cluster==k,],mean))
 }
 
 means
 points(means, pch=17, cex=1.5)
+
+
+# b) ----------------------------------------------------------------------
+
+vars <- NULL
+for(k in 1:length(unique(cluster)))
+{
+  vars <- rbind(vars, sapply(data[cluster == k, ], var))
+}
+
+p <- dim(data)[2] 
+k <- 2 * p * length(unique(cluster))
+alpha <- 0.1
+
+BF <- NULL
+for (i in 1:length(unique(cluster)))
+{
+  n <- table(cluster)[i]
+  cfr.t <- qt(1-alpha/(2*k), n-1) 
+  BF_i <- rbind(c(means[i, ] - cfr.t*sqrt(vars[i, ]/n),
+                  means[i, ],
+                  means[i, ] + cfr.t*sqrt(vars[i, ]/n)),
+                c(vars[i, ]*(n-1) / qchisq(1 - alpha/(2*k), n-1),
+                  vars[i, ],
+                  vars[i, ]*(n-1) / qchisq(alpha/(2*k), n-1)))
+  
+  dimnames(BF_i)[[1]] <- c(paste("m", i, sep = ''), paste("v", i, sep = ''))
+  BF <- rbind(BF, BF_i)
+}
+
+dimnames(BF)[[2]] <- rep(c('inf', 'center', 'sup'), each = p)
+
+for(j in 1:p)
+{
+  print(paste("Confidence intervals for variable:", dimnames(data)[[2]][j]))
+  print(BF[, seq(j, 3*p, by = p)])
+  cat("\n")
+}
+
+for(i in 1:length(unique(cluster)))
+  print(paste("Normality p-value for cluster #", i, ": ", mvn(data[cluster == i, ])$multivariateNormality$'p value', sep = ''))
+
+# Only cluster #4 doesn't satisfy normality assumption
 
 
 # Extra -------------------------------------------------------------------
@@ -55,7 +90,7 @@ coph.ew <- cophenetic(HC)
 cor(data.e, coph.ew)
 
 
-# Choice of k (W(k)/SS_tot Plot) ------------------------------------------
+## Choice of k (W(k)/SS_tot Plot) ------------------------------------------
 
 w <- NULL
 w_i <- NULL

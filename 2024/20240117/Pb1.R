@@ -8,13 +8,8 @@ graphics.off()
 
 options(rgl.printRglwidget = TRUE)
 
-library(mvtnorm)
 library(MVN)
 library(rgl)
-library(car)
-library(dbscan)
-library(cluster)
-library(fields)
 
 data <- read.table('sharks.txt', header = T)
 head(data)
@@ -52,14 +47,14 @@ for(k in 1:4)
   vars = rbind(vars, sd(data[cluster==k,1])^2)
 }
 
-n <- dim(data)[1]
-k <- 2
+k <- 2 * length(unique(cluster))
 alpha <- 0.1
-cfr.t <- qt(1-alpha/(2*k), n-1) 
 
 BF <- NULL
 for (i in 1:4)
 {
+  n <- table(cluster)[i]
+  cfr.t <- qt(1-alpha/(2*k), n-1)
   BF_i <- rbind(c(means[i] - cfr.t*sqrt(vars[i]/n),
                   means[i],
                   means[i] + cfr.t*sqrt(vars[i]/n)),
@@ -73,3 +68,8 @@ for (i in 1:4)
 
 dimnames(BF)[[2]] <- c('inf','center','sup')
 BF
+
+for(i in 1:length(unique(cluster)))
+  print(paste("Normality p-value for cluster #", i, ": ", mvn(data[cluster == i, ])$multivariateNormality$'p value', sep = ''))
+
+# Normality check passed for all clusters
