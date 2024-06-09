@@ -66,24 +66,15 @@ data.feats <- data[,1:4]
   par(mfrow=c(1,2))
   image(S1)
   image(S2)
-  
-  pairs(data[,1:4], col = ifelse(data$group == "high", "blue","red"),pch=19)
-  dim(data[which(data$group == levels(groups.name)[1]),1:4])
-  dim(data[which(data$group == levels(groups.name)[2]),1:4])
-  par(mfrow=c(1,2))
-  boxplot(scale(data[which(data$group == levels(groups.name)[1]),1:4], center = T, scale = F))
-  boxplot(scale(data[which(data$group == levels(groups.name)[2]),1:4], center = T, scale = F))
 }
 
-# We end up rejecting the bartlett test for homogeneity of covariance
-# Even if we can see from boxplot that they are comparable, also from the image of 
-# covariance matrix..pval is too low therefore we proceed with QDA
+# Covar matrix are very similar, we can use lda
 
 
-qda.data <- qda(data.feats, groups.name, prior=prior.c)
-qda.data
+lda.data <- lda(data.feats, groups.name, prior=prior.c)
+lda.data
 {
-  inference_train <- predict(qda.data, data.feats)
+  inference_train <- predict(lda.data, data.feats)
   prior
   G <- g
   misc <- table(class.true=groups.name, class.assigned=inference_train$class)
@@ -94,69 +85,21 @@ qda.data
 }
 {
   # Leave One Out CV: specify priors accordingly in the for loop!
-  errors_CV <- 0
-  for(i in 1:dim(data)[1]){
-    QdaCV.i <- lda(data.feats[-i,], groups.name[-i], prior=prior)
-    errors_CV <- errors_CV + as.numeric(predict(QdaCV.i,data.feats[i,])$class != groups.name[i])
-  }
-  AERCV   <- sum(errors_CV)/length(groups.name)
-  AERCV # typically higher than APER, more accurate
+  LdaCV <- lda(data.feats, groups.name, CV=TRUE, prior = prior.c)  # specify the argument CV
+  misc <- table(class.true=groups.name, class.assignedCV=LdaCV$class)
+  AERCV  <- misc[1,2]*prior.c[1]/sum(misc[1,]) + misc[2,1]*prior.c[2]/sum(misc[2,])
+  AERCV
 }
 APER
 AERCV
 
+
+
+
 # we get very low APER: 0.067 but is not a good estimator of AER
-# Indeed with CV we get 0.5, that is very high, meaning we classify wrong one
-# out of 2.
-# -> overfitting. QDA is overfitting prone since uses more parameters.
-# Also, we have only 30 observatinos per group, that may be too low to estimate
-# covariance matrix.
+# Indeed with CV we get 0.1445093.
+# -> some overfitting due to the fact that we have only 30 observations per group. (60 to estimate covar mat)
 # Our model doesn't have enoguh data, so is performing good only on training data.
-
-
-# The same problem would occours also in LDA, because 60 observations aren't enough
-# to estimate Spooled. 
-
-# Proof also with LDA (exercise purpose, wouldn't have done in exam)
-lda.data <- lda(data.feats, groups.name,prior=prior.c) # add priors
-lda.data
-
-
-# APER
-{
-  inference_train <- predict(lda.data, data.feats)
-  names(inference_train)
-  G <- g
-  misc <- table(class.true=groups.name, class.assigned=inference_train$class)
-  APER <- 0
-  for(g in 1:G)
-    APER <- APER + sum(misc[g,-g])/sum(misc[g,]) * prior[g]  
-  APER
-}
-
-
-LdaCV.s <- lda(data.feats, groups.name, prior=prior.c, CV=T)
-table(class.true=groups.name, class.assignedCV=LdaCV.s$class)
-
-
-
-# With custom priors
-{
-  errors_CV <- 0
-  miscCV <- cbind(0, 0, 0, 0)
-  colnames(miscCV) <- c("TN", "FN", "FP", "TP")
-  for(i in 1:dim(data)[1]){
-    QdaCV.i <- qda(data.feats[-i,], groups.name[-i], prior=prior.c)
-    errors_CV <- errors_CV + as.numeric(predict(QdaCV.i, data.feats[i,])$class != groups.name[i])
-    for(j in 1:2)
-      for(k in 1:2)
-        if (predict(QdaCV.i, data.feats[i, ])$class == levels(groups.name)[j] && groups.name[i] == levels(groups.name)[k]) 
-          miscCV[j*k+as.numeric(j == 2 && k == 1)] <- miscCV[j*k+as.numeric(j == 2 && k == 1)] + 1
-  }
-  AERCV <- sum(errors_CV) / length(groups.name)
-  AERCV
-  
-}
 
 
 
