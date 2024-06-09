@@ -23,7 +23,7 @@ head(data)
     c.ft <- 500        # predict as false when they are true cost 5cents
     
     #prior probabilities
-    pf <- 0.001
+    pf <- 0.0001   # text was saying 0.1% but for explanation i tryed 0.01%
     pt <- 1-pf
     prior = c(pt, pf)
     prior
@@ -115,7 +115,7 @@ lda.data
     APER <- APER + sum(misc[g,-g])/sum(misc[g,]) * prior[g]  
   APER
 }
-# very low: 0.0009666667 (too low?)
+# very low: 1e-4 (too low?): Qui le classificazioni sono tutte ad high
 
 # with prios with cost information
 {
@@ -126,7 +126,7 @@ lda.data
   for(g in 1:G)
     APER <- APER + sum(misc[g,-g])/sum(misc[g,]) * prior.c[g]  
   APER
-} #more reasonable 0.01897285
+} #more reasonable 0.001996207
 
 
 
@@ -138,7 +138,7 @@ lda.data
   misc <- table(class.true=groups.name, class.assignedCV=LdaCV$class)
   AERCV  <- misc[1,2]*prior[1]/sum(misc[1,]) + misc[2,1]*prior[2]/sum(misc[2,])
   AERCV
-} # 0.06756667
+} # 1e-4: come l'APER! Qui le classificazioni sono tutte ad high
 
 # with prios with cost information
 {
@@ -147,7 +147,7 @@ lda.data
   misc <- table(class.true=groups.name, class.assignedCV=LdaCV$class)
   AERCV  <- misc[1,2]*prior.c[1]/sum(misc[1,]) + misc[2,1]*prior.c[2]/sum(misc[2,])
   AERCV
-} # 0.08433104
+} # More reasonable 0.001996207
 
 
 
