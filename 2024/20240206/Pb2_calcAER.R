@@ -151,8 +151,6 @@ lda.data
 
 
 
-
-
 # overfitting due to the fact that we have only 60 observations
 
 
