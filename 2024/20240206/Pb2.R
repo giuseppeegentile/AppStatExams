@@ -66,12 +66,24 @@ lda
 lda.pred <- predict(lda, data[, 1:4])
 
 G <- 2
+
 misc <- table(class.true = hl, class.assigned = lda.pred$class)
 APER <- 0
 for(g in 1:G)
-  APER <- APER + sum(misc[g,-g])/sum(misc[g,]) * prior.c[g]
+  APER <- APER + sum(misc[g,-g])/sum(misc[g,]) * prior[g] # prior NON adjusted! p(true)p(miscl.|true) + p(false)p(miscl.|false)
 
 print(paste("APER:", APER))
+
+ldaCV <- lda(data[, 1:4], hl, CV = TRUE, prior = prior.c)
+
+miscCV <- table(class.true = hl, class.assigned = ldaCV$class)
+AERCV <- 0
+for(g in 1:G)
+  AERCV <- AERCV + sum(miscCV[g,-g])/sum(miscCV[g,]) * prior[g] # prior NON adjusted! p(true)p(miscl.|true) + p(false)p(miscl.|false)
+
+print(paste("AERCV:", AERCV))
+
+# or
 
 errors_CV <- 0
 miscCV <- cbind(0, 0, 0, 0)
@@ -86,21 +98,26 @@ for(i in 1:60)
         miscCV[j*k+as.numeric(j == 2 && k == 1)] <- miscCV[j*k+as.numeric(j == 2 && k == 1)] + 1
 }
 
-AERCV <- sum(errors_CV)/length(hl)
+TN <- miscCV[which(colnames(miscCV) == "TN")]
+FN <- miscCV[which(colnames(miscCV) == "FN")]
+FP <- miscCV[which(colnames(miscCV) == "FP")]
+TP <- miscCV[which(colnames(miscCV) == "TP")]
+
 print(paste("AERCV:", AERCV))
 
-# APER is 0.1445, while AERCV is 0.3
-# We don't have enough observations, therefore the estimates of our parameters are a bit rough
-# and our classifier performs badly on unseen data
+AERCV <- FP / (FP + TN) * ph + FN / (FN + TP) * pl
+
+# Both APER and AERCV are 0.06713333.
+# Given that our dataset seems pretty small and therefore each individual sample's contribution
+# looks significant, this may highlight the fact that the training data might be highly
+# representative of the underlying distribution.
+# On the contrary, this may lead to the conclusion that the dataset is sufficiently big:
+# with the AER estimated via LOOCV we're basically taking an average of 60 APERs. 
 
 
 # c) ----------------------------------------------------------------------
 
 total_products <- 1000
-TN <- miscCV[which(colnames(miscCV) == "TN")]
-FN <- miscCV[which(colnames(miscCV) == "FN")]
-FP <- miscCV[which(colnames(miscCV) == "FP")]
-TP <- miscCV[which(colnames(miscCV) == "TP")]
 
 rbind("Budget for the laboratory test", ((FP / (TN + FP)) * total_products * ph + (TP / (TP + FN)) * total_products * pl) * c.lh)
 
