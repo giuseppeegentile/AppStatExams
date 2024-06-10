@@ -27,7 +27,7 @@ D.mean   <- sapply(D, mean)
 D.cov    <- cov(D)
 D.invcov <- solve(D.cov)
 
-alpha   <- .05 /2 # one sided test
+alpha   <- .05 
 delta.0 <- c(0, 0)
 
 D.T2 <- n * (D.mean - delta.0) %*% D.invcov %*% (D.mean - delta.0)

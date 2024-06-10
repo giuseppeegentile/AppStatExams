@@ -117,8 +117,6 @@ fit.red <- lm(y ~ I(-122*day + day^2),data=data)
 summary(fit.red)
 
 
-
-
 ## Prediction for a new point
 {
   # Use same names used in fm
