@@ -45,7 +45,7 @@ coef.lasso[which(coef.lasso != 0)]
 
 set.seed(20231108)
 
-lambda.grid <- seq(0.01, 10, by = 0.01)
+lambda.grid <- 10^seq(1, -2, length = 100)
 fit.lasso <- glmnet(x, y, lambda = lambda.grid)  
 
 par(mfrow=c(1,1))
