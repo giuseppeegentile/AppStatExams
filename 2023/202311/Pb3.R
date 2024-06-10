@@ -72,7 +72,7 @@ coefficients(fm)
   {
     set.seed(20231108)
     grid_length = 100
-    lambda.grid <- seq(0.01, 10, by=0.01) # always set decreasing lambda!
+    lambda.grid <- 10^seq(1, -2, length = grid_length) # always set decreasing lambda!
     #lambda.grid <- seq(10, 0.01, length=grid_length) 
     cv.lasso <- cv.glmnet(x,y,alpha=1,lambda=lambda.grid)
     cv.lasso
@@ -92,7 +92,7 @@ coefficients(fm)
   }
   # If we need prediction, rather use best
   # If we need explainability, use opt (if actually reduce more)
-  
-  
 }
+
+
 
