@@ -1,68 +1,47 @@
-library(mvtnorm) # to deal with multivariate normal distributions
-library(car) # "Companion to Applied Regression" for regression analysis
+library(MVN)
 
-data <- read.table("gemstones.txt",header=TRUE)
-head(data)
+data <- read.table("consumption.txt", header=TRUE)
+plot(data)
 
-features <- data[,1:8]
-head(features)
+boxplot(data)
+# yeah from the boxplot it's clear that the consumption of energy is higher in the evening than in the
+# mornign per each measured year
 
-boxplot(features)
-# form the boxplot is clear that the scale of variances are very different, it's better
-# to scale the data
-
-scaled <- scale(features)
-boxplot(scaled)
-
-pca <- princomp(scaled, scores=TRUE)
-summary(pca)
-
-loadings <- pca$loadings
-par(mfrow = c(2,1))
-for(i in 1:2) barplot(loadings[,i], ylim = c(-1, 1))
-# we see that gem with high scores on PC1 will be big in general but with low eccentricity
-# gem with high scores on PC2 will present special eccentricoty and lower values of the other characteristics
-# in particular roundness.
+# i have to use a contrast matrix to confront am and pm
+mvn(data)$multivariateNormality
 
 
-types <- factor(data$Type)
-levels(types)
+C <- matrix (0, nrow=5, ncol=6)
+for(i in 1:5)
+{
+  C[i,c(i,i+1)]<-c(-1,1)
+}
+C # thanks beps
+
+mean <- colMeans(data)
+mean
+
+delta0 <-c(0,0,0,0,0,0)
+alpha <- 0.5
 n <- dim(data)[1]
-scores <- pca$scores
-# Define a cyclic palette
-colors <- c("red", "blue", "green")
+q <- 6
 
-col.lab1 <- rep(NA, n)
-for(i in 1:n)
-  col.lab1[i] <- colors[which(types[i] == levels(types))]
+fisher <- (((n-1)*(q-1))/(n-q+1)) *qf(1-alpha,q-1,n-q+1)
 
-par(mfrow=c(1,1))
-plot(scores[, 1:2], col = col.lab1, pch = 19, xlim = c(-8, 25), ylim = c(-3, 3.2))
+Cx <- C %*% mean
+Cmu <- C %*% delta0
+CS <- C %*% cov(data) %*% t(C)
+CSinv <- solve(CS)
 
-legend('topright', levels(types), fill = colors, bty = 'n')
+T2 <- n*t(Cx - Cmu)%*%CSinv%*%(Cx-Cmu)
+
+T2 < fisher
+# FALSE meaning evidence of repeating pattern in time
+pvalue <- 1 - pf(T2*(n - (q - 1)) / ((q - 1) * (n - 1)), q-1,n-q+1)
+pvalue
+
+avg_perday <- ((mean[1]+mean[2])/2 + (mean[3]+mean[4])/2 + (mean[5]+mean[6])/2)/3
+avg_perday # should i do an univariate confidence interval?
 
 
-# confidence region 95%
-ruby <- scores[which(types == "ruby"),1:2]
-n <- dim(ruby)[1]
-p <- dim(ruby)[2]
 
-alpha <-0.05
-mean <- colMeans(ruby)
-S <- cov(ruby)
-
-cfr.fisher <- (((n-1)*p)/(n-p))*qf(1-alpha,p,n-p )
-
-dev.off()
-plot(ruby)
-ellipse(center=mean, shape=S/n, radius=sqrt(cfr.fisher), lwd=2, col='grey',
-        center.cex=1.25)
-center <- mean
-directions <- eigen(S)$vectors
-length_semiaxis <- c(sqrt(cfr.fisher)/sqrt(eigen(S)$values[1]),
-          sqrt(cfr.fisher)/sqrt(eigen(S)$values[2]))
-length_semiaxis
-# test for normality
-p <- mvn(ruby)$multivariateNormality
-p
-# at 1% we can assess normality.
