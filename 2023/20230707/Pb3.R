@@ -1,52 +1,69 @@
 library(MASS)
-library(car)
-library(rgl)
 library(glmnet)
+set.seed(20230707)
 
-set.seed(20231108)
-data <- read.table("students.txt", header=TRUE)
-names(data)
+data <- read.table("expenditure.txt", header =TRUE)
+head(data)
+
 attach(data)
+names(data)
 
-fit <- lm(watchtv ~ gender + age + height + distance + siblings + computertime + 
-          exercisehours + musiccds + playgames)
+fit <- lm(avg_exp ~ income + age +  perc_taxes + owns_house )
 summary(fit)
 
-coefficients <- fit$coefficients
+coef(fit)
+sqrt((fit$residuals%*%fit$residuals)/fit$df.residual)
 
-variance <- (fit$residuals %*% fit$residuals)/(fit$df.residual)
+par(mfrow=c(2,2))
+plot(fit)
+
+par(mfrow=c(2,2))
+plot(fit$residuals ~ income)
+plot(fit$residuals ~ age)
+plot(fit$residuals ~ perc_taxes)
+plot(fit$residuals ~ owns_house)
+
+# i would introduce the square of the age as a variable
+
+age2 <- age^2
+fit2 <- lm(avg_exp ~ income +age+ age2 +  perc_taxes + owns_house )
+summary(fit2)
+par(mfrow=c(2,2))
+plot(fit2)
+
+plot(fit2$residuals ~ age2 )
+
+# confidence interval for the mean of those who owns and thos who rent.
+# the average difference in avg_exp is the value of the coefficient for the dummy variable
+# owns_house -> -48,98811. Meaning those who rent spend more.
+
+confint(fit2)
+# we have strong evidence of collinearity in income and perc_taxes
+vif(fit)
+# this is a good reason to perform a penalized regression.
+
+# fit with lasso
+lambda = 10^seq(10,-2,length.out=100)
 
 # Build the matrix of predictors
-x <- model.matrix(watchtv ~ gender + age + height + distance + siblings + computertime + 
-                    exercisehours + musiccds + playgames)[,-1]
+x <- model.matrix(avg_exp ~ income + age +  perc_taxes + owns_house )[,-1]
 # Build the vector of response
-y <- watchtv
-fit.lasso <- glmnet(x,y, lambda = 0.3)
+y <- avg_exp
 
-coefficients <- predict(fit.lasso, s=0.3, type="coefficients")
-coefficients
-plot(coefficients)
-abline(h=0)
 
-# the significant coefficients are the intercept,the age, distance, siblings, computertime,
-# musiccds, and playgames
+cv.lasso <- cv.glmnet(x,y,lambda=lambda) # default: 10-fold CV
 
-# it does not specify a number of folds, so i assume leave one out cross validation
-grid <- seq(0.01,10, length=100) # grid of lambda
-grid
-n<-dim(data)[1]
-n
-cv.out <- cv.glmnet(x,y,alpha=1,nfold=n,lambda=grid) 
-
-plot(cv.out)
-
-bestlam.lasso <- cv.out$lambda.min
+bestlam.lasso <- cv.lasso$lambda.min
 bestlam.lasso
 
-cv.out # 2.748 MSE
+optlam.lasso <- cv.lasso$lambda.1se
+optlam.lasso
 
-fit.best <- glmnet(x,y, lambda = bestlam.lasso)
+par(mfrow=c(1,1))
+plot(cv.lasso)
+abline(v=log(bestlam.lasso), lty=1)
 
-cofficients <- coef(fit.best)
-coefficients
+# i would choose the lambda.1se since it corresponds to less complexity and almost the same 
+# mean squared error
+
 
