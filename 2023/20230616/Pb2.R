@@ -131,9 +131,9 @@ dbs
 # e )
 n=dim(data)[1] #entries
 
-data.mds <- cmdscale(data.e, k=3)
+data.mds <- cmdscale(data.e, k=2)
 data.mds
-plot(data.mds[,1], data.mds[,2], type='n', asp=1, axes=FALSE, main="MDS Data")
+plot(data.mds, col=as.factor(cluster.ea), pch=19, asp=1, axes=FALSE, main="MDS Data of hierarchical")
 text(data.mds[,1], data.mds[,2], cex = 0.75, pos = 3)
 
 # compare the original matrix d_ij = d(x_i,x_j) and delta_ij = d(y_i,y_j) 
@@ -146,3 +146,7 @@ abline(coef = c(0,1), col="red")
 # distance is indeed 1.0
 
 
+
+# Small extra: plotting the dbscan
+plot(data.mds, col=as.factor(clustered_labels), pch=19, asp=1, axes=FALSE, main="MDS Data of dbscan")
+text(data.mds[,1], data.mds[,2], cex = 0.75, pos = 3)
