@@ -1,68 +1,79 @@
-library(mvtnorm) # to deal with multivariate normal distributions
-library(car) # "Companion to Applied Regression" for regression analysis
-
-data <- read.table("gemstones.txt",header=TRUE)
+library(MASS)
+library(MVN)
+library(heplots)
+data <- read.table("doping.txt", header=TRUE)
 head(data)
 
-features <- data[,1:8]
-head(features)
 
-boxplot(features)
-# form the boxplot is clear that the scale of variances are very different, it's better
-# to scale the data
+result <- factor(data$result)
 
-scaled <- scale(features)
-boxplot(scaled)
+clean <- which(result=="clean")
+doped <- which(result=="doped")
+feat <- data[,1:4]
 
-pca <- princomp(scaled, scores=TRUE)
-summary(pca)
+p.d <- 0.01
+p.nd <- 1 - p.d
 
-loadings <- pca$loadings
-par(mfrow = c(2,1))
-for(i in 1:2) barplot(loadings[,i], ylim = c(-1, 1))
-# we see that gem with high scores on PC1 will be big in general but with low eccentricity
-# gem with high scores on PC2 will present special eccentricoty and lower values of the other characteristics
-# in particular roundness.
+# what i pay if i put a doped in the non doped
+c.dnd <- 50000
+# what i pay if i put the non doped in the doped
+c.ndd <- 1000
+
+priors.orig <- c(p.nd, p.d)
+
+p.d.new <- (p.d * c.dnd) / (p.d*c.dnd + p.nd*c.ndd)
+p.nd.new <- (p.nd * c.ndd) / (p.d*c.dnd + p.nd*c.ndd)
+
+priors <- c(p.nd.new, p.d.new)
+priors
+
+plot(feat,col=ifelse(result=="clean","green","red"),pch=19)
+#LDA vs QDA
+
+# gaussianity assumption
+mvn(feat[clean,])$multivariateNormality
+mvn(feat[doped,])$multivariateNormality
+# gaussianity assumption confirmed
+
+# same covariance between groups
+S1 <- cov(feat[clean,])
+S2 <- cov(feat[doped,])
+
+boxM(feat, result)
+
+# we can assume same covariance structure
+
+# LDA
+fit <- manova(as.matrix(feat) ~ result)
+summary(fit)
+# we do not expect a good result from the classifier
+
+lda.cv <- lda(feat, result, prior=priors, CV=TRUE)
+
+table(class.true=result, class.assignedCV=lda.cv$class)
+
+G <- 2
+misc <- table(class.true=result, class.assigned=lda.cv$class)
+APER.CV <- 0
+for(g in 1:G)
+   APER.CV <- APER.CV + sum(misc[g,-g])/sum(misc[g,]) * priors.orig[g]
+
+APER.CV
+
+lda.normal <- lda(feat, result, prior=priors)
+
+table(class.true=result, class.assigned=(lda.normal)$class)
 
 
-types <- factor(data$Type)
-levels(types)
-n <- dim(data)[1]
-scores <- pca$scores
-# Define a cyclic palette
-colors <- c("red", "blue", "green")
+# new 2000 observation.
+new.obs <- 2000
 
-col.lab1 <- rep(NA, n)
-for(i in 1:n)
-  col.lab1[i] <- colors[which(types[i] == levels(types))]
+budget <- APER.CV * p.d*new.obs * c.dnd + APER.CV *p.nd*new.obs*c.ndd
+budget
 
-par(mfrow=c(1,1))
-plot(scores[, 1:2], col = col.lab1, pch = 19, xlim = c(-8, 25), ylim = c(-3, 3.2))
+oldbudget <- 1000*new.obs
+oldbudget
 
-legend('topright', levels(types), fill = colors, bty = 'n')
+oldbudget - budget
 
 
-# confidence region 95%
-ruby <- scores[which(types == "ruby"),1:2]
-n <- dim(ruby)[1]
-p <- dim(ruby)[2]
-
-alpha <-0.05
-mean <- colMeans(ruby)
-S <- cov(ruby)
-
-cfr.fisher <- (((n-1)*p)/(n-p))*qf(1-alpha,p,n-p )
-
-dev.off()
-plot(ruby)
-ellipse(center=mean, shape=S/n, radius=sqrt(cfr.fisher), lwd=2, col='grey',
-        center.cex=1.25)
-center <- mean
-directions <- eigen(S)$vectors
-length_semiaxis <- c(sqrt(cfr.fisher)/sqrt(eigen(S)$values[1]),
-          sqrt(cfr.fisher)/sqrt(eigen(S)$values[2]))
-length_semiaxis
-# test for normality
-p <- mvn(ruby)$multivariateNormality
-p
-# at 1% we can assess normality.
