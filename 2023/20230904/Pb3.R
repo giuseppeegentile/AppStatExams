@@ -1,52 +1,62 @@
 library(MASS)
 library(car)
 library(rgl)
-library(glmnet)
+library(nlmeU)
+library(corrplot)
+library(nlme)
+library(lattice)
+library(plot.matrix)
+library(lme4)
+library(insight)
 
-set.seed(20231108)
-data <- read.table("students.txt", header=TRUE)
-names(data)
+data <- read.table("satisfaction.txt", header=TRUE)
+
 attach(data)
+names(data)
 
-fit <- lm(watchtv ~ gender + age + height + distance + siblings + computertime + 
-          exercisehours + musiccds + playgames)
+fit <- lm( score ~ purch_amount + memb_duration + age)
+coef(fit)
+
+resVar <- (fit$residuals %*% fit$residuals) / fit$df.residual
+resVar
 summary(fit)
 
-coefficients <- fit$coefficients
+par(mfrow=c(2,2))
+plot(fit)
+# we do not see evidence of eteroschedasticity in the residual plot
+# and the QQ plot shows enough gaussianity
 
-variance <- (fit$residuals %*% fit$residuals)/(fit$df.residual)
+shapiro.test(fit$residuals) # the test further confirms my hypothesis
 
-# Build the matrix of predictors
-x <- model.matrix(watchtv ~ gender + age + height + distance + siblings + computertime + 
-                    exercisehours + musiccds + playgames)[,-1]
-# Build the vector of response
-y <- watchtv
-fit.lasso <- glmnet(x,y, lambda = 0.3)
+linearHypothesis(fit,rbind(c(0,0,1,0),c(0,0,0,1)), c(0,0))
+# they are significant at level 5%
 
-coefficients <- predict(fit.lasso, s=0.3, type="coefficients")
-coefficients
-plot(coefficients)
-abline(h=0)
+# model reduction trough extensive backward search
+summary(fit)
+# we see that memb-duration has the high p-value
+fit2 <- lm( score ~ purch_amount + age)
+summary(fit2)
+# also age has high p value at level 5%
+fit3 <- lm(score  ~ purch_amount)
+summary(fit3)
 
-# the significant coefficients are the intercept,the age, distance, siblings, computertime,
-# musiccds, and playgames
+# however the R squared is going down as we reduce the regressors, as expected.
+# i would just keep the original model
 
-# it does not specify a number of folds, so i assume leave one out cross validation
-grid <- seq(0.01,10, length=100) # grid of lambda
-grid
-n<-dim(data)[1]
-n
-cv.out <- cv.glmnet(x,y,alpha=1,nfold=n,lambda=grid) 
 
-plot(cv.out)
+lmm<- lmer( score ~ purch_amount + memb_duration + age+(1|store),
+                  data = data)
 
-bestlam.lasso <- cv.out$lambda.min
-bestlam.lasso
+sigma2_eps <- as.numeric(get_variance_residual(lmm))
+sigma2_eps
+sigma2_b <- as.numeric(get_variance_random(lmm))
+sigma2_b
 
-cv.out # 2.748 MSE
 
-fit.best <- glmnet(x,y, lambda = bestlam.lasso)
+PVRE <- sigma2_b/(sigma2_b+sigma2_eps)
+PVRE # 20 % chiara masci direbbe very nice porcodio
 
-cofficients <- coef(fit.best)
-coefficients
 
+dotplot(ranef(lmm, condVar=T))
+# i would say store F is the one associated with the highest score, since the random effect creates
+# is higher.
