@@ -67,7 +67,7 @@ anova(fm9.2,fm) #very low pval, there is difference in the models
 # d)
 fm12.2 <- gls(y ~ time + costs0 + growth:time + rad_less_15_city + size, 
               weights = varPower(form = ~time),
-              correlation = corAR1(form = ~1),
+              correlation = corAR1(form = ~time|storage_id),
               data = data)
 
 summary(fm12.2)
