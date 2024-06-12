@@ -1,128 +1,127 @@
+
 setwd("C:/Users/Giuseppe/Documents/.magistrale/secondo anno/AppStat/Exams/2024/20240117/20240117")
+data <- read.table("asteroids.txt",header=T)
+plot(data,pch=19)
 
-library(nlmeU) 
-library(nlme) 
-library(lme4)
-library(corrplot)
-library(lattice)
-library(insight)
-library(plot.matrix)
-library(MASS)
-library(car)
-library(rgl)
-library(glmnet)
-
-options(rgl.printRglwidget = TRUE)
-
-
-data <- read.table("StorageCentres.txt",header=T)
 head(data)
+dim(data)
 
-# See how data are spread: if lot of point on low values and few on high 
-# -> log transform both target and features
-plot(data, pch=19)
-# If variables are correlated -> you'll have collinearity 
+type <- data$Type
+data <- data[, 1:dim(data)[2]-1]
+boxplot(scale(x = data, center = T, scale = F), las = 2, col = 'gold')
 
-
-n   <- dim(data)[[1]]
-
-# Target variable
-y   <- data$costs
-
-# Model:
-# distance = beta_0 + beta_1 * f1 + beta_2 * f2^2 + Eps
-# (linear in the parameters!)
-
-# Assumptions:
-# 1) For parameter estimation (OLS): Homoschedasticity of residual (no need normality to estimate params!) 
-#                           E(Eps) = 0  obvious if there is the intercept
-#                           Var(Eps) = sigma^2  Note: also uncorrelated eps (eps_i+1 don't depent on eps_i)
-# 2) For inference (so conf intervals):  Eps ~ N(0, sigma^2)
+# we must scale variables, since surfarea and convvol have higher variances than
+# other features
+# due to different scale of the unit of measure
 
 
-## Parameter estimation -----------------------------------------------------------------------
-# Assumptions: E(Eps) = 0  and  Var(Eps) = sigma^2 
-fm <- lm(y ~ time +costs0 + time:growth + rad_less_15_city + size,data=data)
-summary(fm) 
-# Positive coefficient influence positively the target y (if they have high Pr)
-# R^2 coeff of determination: how much of the columns of Z are useful to explain the variability of y.
-# R-adjusted^2: how good is the fit. Penalize lots of covariates
-# Residual standard error: (estimated variance of residual )^/1/2 estimate of sigma
-sum(residuals(fm)^2)/fm$df 
-coefficients(fm) # watch down if you used dummy!
 
 
-AIC(fm)
 
 
-par(mfrow=c(2,2))
-plot(fm)
-# 1st: no pattern of fitted values with the residual: we want normality around zero.
-#        we don't want dependence of residual with the fitted value (if there is -> non linearity of data) 
-#        heteroschedasticity if there is "the tunnel" (correlation between eps_i and eps_i+1)
-#         TUNNEL -> log(Y) or sqrt(Y)
-#       ideally: you should do against every variable: if you observe a pattern
-#                 with a variable, ADD that pattern in function of that variable
-# 2nd: QQ plot: must have diagonal fit. Acceptable to have some outliers
-# 4th: Detect influential points: 
-#       if cook's distance is high (point >1) that point is influential
 
 
-shapiro.test(residuals(fm))
 
-# also look at 
-vif(fm)
 
-par(mfrow=c(1,1))
-# we'd like high pvalue.
-# however, if you have low pvalue and this is due to outliers (in qq plot some points
-# are far from the diagonal), if those points are not influential (from 4-th plot)
-# you can proceed 
+data.sd <- scale(data)
+data.sd <- data.frame(data.sd)
+head(data.sd)
 
-# Residual against a specific feature
+
+# Boxplot
+par(mfrow = c(1, 1))
+boxplot(data.sd, las = 2, col = 'gold')
+# now every box has similar height
+# you can see in the next plot how every feature has variance 1
+barplot(sapply(data.sd, sd)^2, las = 2, main = 'Standardized Variables', ylim = c(0, 7),
+        ylab = 'Variances')
+
+
+pc.data <- princomp(data.sd, scores = T)
+pc.data
+summary(pc.data)
+# to explain the 88% of the variance we can take only two components
+
+# Loadings
+load.data <- pc.data$loadings
+load.data
+
+# Graphical representation of loadings of the first 3 PC
+par(mar = c(2,2,2,1), mfrow=c(2,1))
+for(i in 1:2)barplot(load.data[,i], ylim = c(-1, 1), main=paste('Loadings PC ',i,sep=''))
+
+# first loading is a weighted average for all the features except for Eccentricity 
+# and roundness. We can say that is representing the geometrical properties of the 
+# asteroid in terms of tangible quantities.
+# For component 2 is a contrast between how elongated and eccentric (more ellipsoidal like )is 
+# and how round is (more spherical like, also penalizing the min axes, so if lower, the higher 
+# the loading).
+
+
+
+scores.data <- pc.data$scores
+par(mfrow = c(1, 1))
+plot(scores.data[, 1:2], pch=19, col=type)
+
+abline(h=0, v=0, col='black')
+
+
+
+n <- dim(data)[1]
+
+colors <- c("red", "green", "blue")
+all_possible_labels <- c(unique(type))
+data.label <- factor(type, levels = all_possible_labels)
+
+col.lab1 <- rep(NA, n)
+for(i in 1:n)
+  col.lab1[i] <- colors[which(type[i] == levels(as.factor(type)))]
+
+plot(scores.data[, 1:2], col = col.lab1, pch = 19)
+abline(h = min(scores.data[,2]), v = min(scores.data[,1]), col = 1)
+points(scores.data[, 1], rep(min(scores.data[,2]), n), col = col.lab1, pch = 19)
+points(rep(min(scores.data[,1]), n), scores.data[, 2], col = col.lab1, pch = 19)
+abline(h = 0, v = 0, lty = 2, col = 'grey')
+legend('topright', levels(data.label), fill = colors, bty = 'n')
+
+# We can clearly see that carbonaceous have low PC1, silicate moderate and metallic very high
+
+#c)
+D <- scores.data[which(type=="metallic"), 1:2]
+
+result =mvn(D <- scores.data[which(type=="metallic"), 1:2])
+result$multivariateNormality
+# We get a low pvalu -> can reject at 5% but not at 1%
+# -> can't reject normality
+
+n <- dim(D)[1]
+p <- dim(D)[2]
+
+# Confidence region for true mean difference with confidence level 95%
 {
-  plot(resid(fm) ~ time, data = data)
-  
-  # spot a residual with ^2 dependence
-  # -> add I(speed^2) to the linear model (don't remove speed!)
-  
-  boxplot(fm$residuals ~ data$time, xlab='time', ylab='Residuals')
-}
-par(mfrow=c(1,1))
-
-fm9.2 <- gls(y ~  time +costs0 + time:growth + rad_less_15_city + size,
-             weights = varPower(form = ~time), # Var. function; <delta, v_it>-group
-             data = data)
-summary(fm9.2)
-
-
-{
-  intervals(fm9.2, which = "var-cov") 
-}
-# delta:
-#         lower     est.    upper
-# power 0.7102282 0.88779 1.065352
-AIC(fm9.2)
-# 1192.182
-
-# 3.2 Correlation 2: AR(1) autoregressive
-{
-  # storage centre = school: the heteroschedasticity structure
-  # time: 
-  fm12.2 <- gls(y ~  time +costs0 + time:growth + rad_less_15_city + size, 
-                weights = varPower(form = ~time), 
-                correlation=corAR1(form= ~time|id_storage_centre),
-                data = data)
-  
-  summary(fm12.2)
-  
-  {
-    intervals(fm12.2, which = "var-cov") 
-  }
-  #        lower        est.     upper
-  # Phi -0.1999194 -0.04387526 0.1143395
+  D.mean = colMeans(D)
+  D.cov  = cov(D)
+  alpha   <- .05
+  cfr.fisher <- ((n - 1) * p / (n - p)) * qf(1 - alpha, p, n - p)
+  plot(D, asp=1, pch=19)
+  ellipse(center=D.mean, shape=D.cov/n, radius=sqrt(cfr.fisher), lwd=2)
   
 }
 
-anova(fm12.2,fm9.2)
-# no significant difference, therefore we prefer fm9.2 since has less params
+# Confidence region characterization
+{
+  # Center:
+  D.mean
+  
+  # Directions of the principal axes:
+  eigen(D.cov/n)$vectors
+  
+  # Length of the semi-axes of the ellipse:
+  r <- sqrt(cfr.fisher)
+  r*sqrt(eigen(D.cov/n)$values)
+}
+
+
+
+
+
