@@ -2,7 +2,7 @@
 
 # Exam 18/01/2023
 
-# Exercise 1
+# Exercise 2
 
 library(MASS)
 library(car)
