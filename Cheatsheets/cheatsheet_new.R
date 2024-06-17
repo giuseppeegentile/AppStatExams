@@ -126,7 +126,7 @@ points(x = 100, y = 80, pch = 19, cex = 2, col = 'red')
 abline(h = 80, lty = 2, col = 'grey')
 abline(v = 100, lty = 2, col = 'grey')
 abline(a = 20, b = (80-20) / 100, col = 'blue')
-lines(c(95, 95), c(60, 100), col='blue', pch=16, type='b')
+lines(c(95, 95), c(60, 100), col = 'blue', pch = 16, type = 'b')
 # Note: for "lines", the first argument are all the x-coords, while the 2nd all the y-coords
 # (Do not confuse the first argument with the first point and the 2nd w/ the 2nd)
 segments(105, 60, 105, 100, lwd = 3, col = 'green')
@@ -1337,9 +1337,9 @@ which(p.fdr < alpha)
 treatment <- factor(data$treatment)
 target <- data[, 1:2] # variables
 
-n <- length(treatment)      
-ng <- table(treatment)       
-treat <- levels(treatment)      
+n <- length(treatment)
+ng <- table(treatment)
+treat <- levels(treatment)
 g <- length(levels(treatment))
 p <- dim(target)[2]
 
@@ -1446,6 +1446,7 @@ means <- NULL
 for(i in 1:g) {
   means <- rbind(means, sapply(target[idx[i, ], ], mean)) 
 }
+dimnames(means)[[1]] <- treat
 means
 
 inf <- list()
@@ -1479,13 +1480,6 @@ for(i in 1:p)
   boxplot(target[, i] ~ treatment, main = colnames(target)[i], ylim = range(target), col = rainbow(g))
 }
 
-mg <- NULL
-for(i in 1:g)
-{
-  mg <- rbind(mg, means[i, ])
-}
-mg
-
 for(k in 1:p)
 {
   plot(c(1, g*(g - 1)/2), pch = '', 
@@ -1497,7 +1491,7 @@ for(k in 1:p)
     j <- pairs[1, i]
     l <- pairs[2, i]
     lines(c(i, i), c(CI[[i]][k, 1], CI[[i]][k, 2]))
-    points(i, mg[j, k] - mg[l, k], pch = 16); 
+    points(i, means[j, k] - means[l, k], pch = 16); 
     points(i, CI[[i]][k, 1], col = rainbow(g)[l], pch = 16); 
     points(i, CI[[i]][k, 2], col = rainbow(g)[j], pch = 16); 
   }
@@ -1721,16 +1715,20 @@ summary.aov(fit2)
 ##### Confidence Intervals -----
 
 alpha <- 0.10
-k <- p*(g*b)*(g*b-1)/2
-kappa <- p*g*(g-1)/2 + p*b*(b-1)/2 # (?)
+k <- p*(g*b)*(g*b-1)/2 # Complete Model
+k <- p*g*(g-1)/2 + p*b*(b-1)/2 # Additive Model
+dofs <- g*b*(n - 1) # Complete Model
+dofs <- g*b*n - g-b+1 # Additive Model
 
-W <- summary.manova(fit2)$SS$Residuals
-qT <- qt(1 - alpha/(2*k), g*b*n - g-b+1)
+W <- summary.manova(fit)$SS$Residuals # Complete Model
+W <- summary.manova(fit2)$SS$Residuals # Additive Model
+qT <- qt(1 - alpha/(2*k), dofs)
 
 means <- NULL
 for(i in 1:(g*b)) {
   means <- rbind(means, sapply(target[idx[i, ], ], mean)) 
 }
+dimnames(means)[[1]] <- treats
 means
 
 inf <- list()
@@ -1745,8 +1743,8 @@ for (i in 1:ncol(pairs)) {
   m1 <- means[idx1, ]
   m2 <- means[idx2, ]
   
-  inf_val <- m1 - m2 - qT * sqrt(diag(W) / (g*b*n - g-b+1) * (1/n + 1/n))
-  sup_val <- m1 - m2 + qT * sqrt(diag(W) / (g*b*n - g-b+1) * (1/n + 1/n))
+  inf_val <- m1 - m2 - qT * sqrt(diag(W) / dofs * (1/n + 1/n))
+  sup_val <- m1 - m2 + qT * sqrt(diag(W) / dofs * (1/n + 1/n))
   
   inf[[paste("inf", idx1, idx2, sep = '')]] <- inf_val
   sup[[paste("sup", idx1, idx2, sep = '')]] <- sup_val
@@ -1762,31 +1760,27 @@ for(i in 1:p)
   boxplot(target[, i] ~ treatments, main = colnames(target)[i], ylim = range(target), col = rainbow(g))
 }
 
-mg <- NULL
-for(i in 1:(g*b))
-{
-  mg <- rbind(mg, means[i, ])
-}
-mg
-
-# !!! THIS DOES NOT WORK PROPERLY !!! #
 for(k in 1:p)
 {
   plot(c(1, (g*b)*((g*b) - 1)/2), pch = '', 
        xlim = c(1, (g*b)*((g*b) - 1)/2), ylim = c(range(CI)[1] - 3, range(CI)[2] + 3),
        xlab = 'Pairs Treat', ylab = paste('CI tau', k), 
        main = paste('CI tau', colnames(target)[k]))
-  for(i in 1:(g*b)*((g*b) - 1)/2)
+  for(i in 1:((g*b)*((g*b) - 1)/2))
   {
     j <- pairs[1, i]
     l <- pairs[2, i]
     lines(c(i, i), c(CI[[i]][k, 1], CI[[i]][k, 2]))
-    points(i, mg[j, k] - mg[l, k], pch = 16); 
-    points(i, CI[[i]][k, 1], col = rainbow(g)[l], pch = 16); 
-    points(i, CI[[i]][k, 2], col = rainbow(g)[j], pch = 16); 
+    points(i, means[j, k] - means[l, k], pch = 16); 
+    points(i, CI[[i]][k, 1], col = rainbow(g*b)[l], pch = 16); 
+    points(i, CI[[i]][k, 2], col = rainbow(g*b)[j], pch = 16); 
   }
   abline(h = 0)
 }
-# !!! THIS DOES NOT WORK PROPERLY !!! #
 
 par(mfrow=c(1,1))
+
+
+###---------------------------###
+### SUPERVISED CLASSIFICATION ###----------------------------------------------------------
+###---------------------------###
