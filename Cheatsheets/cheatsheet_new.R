@@ -1259,11 +1259,10 @@ for(i in 1:(g-1))
 {
   for(j in (i+1):g) 
   {
-    ind <- (i-1)*g-i*(i-1)/2 + (j-i)
-    lines (c(h, h), c(CI.range[ind, 1], CI.range[ind, 2]), col = 'grey55'); 
+    lines (c(h, h), c(CI.range[h, 1], CI.range[h, 2]), col = 'grey55'); 
     points(h, Mediag[i] - Mediag[j], pch = 16, col = 'grey55'); 
-    points(h, CI.range[ind, 1], col = rainbow(g)[j], pch = 16); 
-    points(h, CI.range[ind, 2], col = rainbow(g)[i], pch = 16); 
+    points(h, CI.range[h, 1], col = rainbow(g)[j], pch = 16); 
+    points(h, CI.range[h, 2], col = rainbow(g)[i], pch = 16); 
     h <- h + 1
   }
 }
@@ -1614,6 +1613,66 @@ Ptot <- 1 - pf(Ftot, (g - 1) + (b - 1), n * g * b - g - b + 1)
 Ptot
 
 
+##### Confidence Intervals -----
+
+alpha <- 0.10
+k <- (g*b)*(g*b-1)/2 # Complete Model
+k <- (g*b)*(g*b-1)/2 - (g+b)*(g*b-g-b+1)/2 # Additive Model
+dofs <- g*b*(n - 1) # Complete Model
+dofs <- g*b*n - g-b+1 # Additive Model
+
+qT <- qt(1 - alpha/(2*k), dofs)
+
+Mediag <- tapply(target, treatments, mean)
+SSres <- sum(residuals(fit) ^ 2)
+S <- SSres / dofs
+
+CI.range <- NULL
+for(i in 1:((g*b)-1)) 
+{
+  for(j in (i+1):(g*b)) 
+  {
+    print(paste(treats[i], "-", treats[j]))        
+    print(as.numeric(c(Mediag[i] - Mediag[j] - qT * sqrt(S * (1/n + 1/n)),
+                       Mediag[i] - Mediag[j] + qT * sqrt(S * (1/n + 1/n)))))
+    CI.range <- rbind(CI.range, as.numeric(c(Mediag[i]-Mediag[j] - qT * sqrt(S * (1/n + 1/n)),
+                                             Mediag[i]-Mediag[j] + qT * sqrt(S * (1/n + 1/n)))))
+  }
+}
+
+h <- 1
+plot(c(1, (g*b)*(g*b-1)/2), range(CI.range), pch = '', xlab = 'Pairs Treat', ylab = 'Conf. Int. tau Target')
+for(i in 1:((g*b)-1)) 
+{
+  for(j in (i+1):(g*b)) 
+  {
+    lines (c(h, h), c(CI.range[h, 1], CI.range[h, 2]), col = 'grey55'); 
+    points(h, Mediag[i] - Mediag[j], pch = 16, col = 'grey55'); 
+    points(h, CI.range[h, 1], col = rainbow(g*b)[j], pch = 16); 
+    points(h, CI.range[h, 2], col = rainbow(g*b)[i], pch = 16); 
+    h <- h + 1
+  }
+}
+abline(h = 0)
+
+
+##### Reduced additive model (ANOVA one-way, b=2) -----
+
+# X.jk = mu + beta.j + eps.jk; eps.jk~N(0,sigma^2), 
+#     j=1,2 (effect treatment2)
+fit.aov1 <- aov(target ~ treatment2)
+summary.aov(fit.aov1)
+
+SSres <- sum(residuals(fit.aov1)^2)
+
+# Interval at 90% for the differences (reduced additive model)
+# [b=2, thus one interval only]
+IC <- c(diff(M.treat2) - qt(0.95, (n*g-1)*b) * sqrt(SSres/((n*g-1)*b) *(1/(n*g) + 1/(n*g))), 
+        diff(M.treat2) + qt(0.95, (n*g-1)*b) * sqrt(SSres/((n*g-1)*b) *(1/(n*g) + 1/(n*g))))
+names(IC) <- c('Inf', 'Sup')
+IC # IC for mu(j=1)-mu(j=2)
+
+
 #### Two-ways MANOVA ----
 
 treatment1 <- factor(data$treatment1, labels = c('F', 'T')) 
@@ -1716,7 +1775,7 @@ summary.aov(fit2)
 
 alpha <- 0.10
 k <- p*(g*b)*(g*b-1)/2 # Complete Model
-k <- p*g*(g-1)/2 + p*b*(b-1)/2 # Additive Model
+k <- p*((g*b)*(g*b-1)/2 - (g+b)*(g*b-g-b+1)/2) # Additive Model
 dofs <- g*b*(n - 1) # Complete Model
 dofs <- g*b*n - g-b+1 # Additive Model
 
