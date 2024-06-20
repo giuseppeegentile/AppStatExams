@@ -1846,11 +1846,11 @@ par(mfrow=c(1,1))
 
 #### LDA & QDA ----
 
-groups <- factor(data$class, labels = c('F','T'))
-col.lab <- ifelse(groups %in% c("T"), 'red', 'blue')
+groups <- factor(data$class, labels = c('N','P'))
+col.lab <- ifelse(groups %in% c("P"), 'red', 'blue')
 
-false <- which(groups == "F")
-true <- which(groups == "T")
+neg <- which(groups == "N")
+pos <- which(groups == "P")
 
 n <- dim(data)[1]
 
@@ -1865,25 +1865,25 @@ plot(target, rep(0, n), col = col.lab, pch = 20)
 ###### Verify Assumptions ------
 
 # 1) normality (univariate) within the groups (although LDA is robust to it)
-shapiro.test(target[false])
-shapiro.test(target[true])
+shapiro.test(target[neg])
+shapiro.test(target[pos])
 
 # 2) equal variance (univariate)
-var.test(target[false], target[true])
+var.test(target[neg], target[pos])
 # If OK -> LDA, else -> QDA
 
 
 ###### Perform Classification ------
 
-c.ft <- 100000
-c.tf <- 500
+c.np <- 100000
+c.pn <- 500
 
-pt <- 0.001
-pf <- 1-0.001
-prior = c(pf, pt)
+p.pos <- 0.001
+p.neg <- 1-0.001
+prior = c(p.neg, p.pos)
 prior
 
-prior.c <- c(pf*c.tf/(c.ft*pt+c.tf*pf), pt*c.ft/(c.ft*pt+c.tf*pf))
+prior.c <- c(p.neg*c.pn/(c.np*p.pos+c.pn*p.neg), p.pos*c.np/(c.np*p.pos+c.pn*p.neg))
 prior.c
 
 x <- data.frame(target = seq(range(target)[1] - diff(range(target))/5, range(target)[2] + diff(range(target))/5, diff(range(target))/100))
@@ -1900,9 +1900,9 @@ head(predict(lda, x)$posterior)
 LDA.F <- predict(lda, x)$posterior[, 1]
 LDA.T <- predict(lda, x)$posterior[, 2]
 
-plot(target[false], rep(0, length(false)), pch = 16, col = 'blue', xlim = range(x), ylim = c(0, 1),
+plot(target[neg], rep(0, length(neg)), pch = 16, col = 'blue', xlim = range(x), ylim = c(0, 1),
      xlab = 'x', ylab = 'estimated posterior', main = "LDA")
-points(target[true], rep(0, length(true)), pch = 16, col = 'red')
+points(target[pos], rep(0, length(pos)), pch = 16, col = 'red')
 abline(v = mean(range(target)), col = 'grey')
 points(c(mean(range(target)), mean(range(target))), c(predict(lda, data.frame(target = mean(range(target))))$posterior),
        col = c('blue', 'red'), pch = '*', cex = 2.5)
@@ -1914,7 +1914,7 @@ lines(x[, 1], LDA.F, type = 'l', col = 'blue',
       xlab = 'x', ylab = 'estimated posterior', main = "LDA")
 lines(x[, 1], LDA.T, type = 'l', col = 'red')
 abline(h = 0.5)
-legend(range(target)[1], 1, legend = c('P(F|X=x)', 'P(T|X=x)'), fill = c('blue', 'red'), cex = 0.7)
+legend(range(target)[1], 1, legend = c('P(NEG|X=x)', 'P(POS|X=x)'), fill = c('blue', 'red'), cex = 0.7)
 
 # Set prior probabilities
 
@@ -1928,15 +1928,15 @@ plot(x[, 1], LDA.F.p, type = 'l', col = 'blue', xlim = range(x), ylim = c(0,1),
      xlab = 'x', ylab = 'estimated posterior', main = "LDA")
 points(x[ ,1], LDA.T.p, type = 'l', col = 'red')
 abline(h = 0.5)
-legend(range(target)[1], 1, legend = c('P(F|X=x)', 'P(T|X=x)'), fill = c('blue', 'red'), cex = 0.7)
-points(target[false], rep(0, length(false)), pch = 16, col = 'blue')
-points(target[true], rep(0, length(true)), pch = 16, col = 'red')
+points(target[neg], rep(0, length(neg)), pch = 16, col = 'blue')
+points(target[pos], rep(0, length(pos)), pch = 16, col = 'red')
+abline(v = mean(range(target)), col = 'grey')
 points(c(mean(range(target)), mean(range(target))), c(predict(lda.p, data.frame(target = mean(range(target))))$posterior),
        col = c('blue', 'red'), pch = '*', cex = 2.5)
-abline(v = mean(range(target)), col = 'grey')
 
 points(x[, 1], LDA.F, type = 'l', col = 'grey')
 points(x[, 1], LDA.T, type = 'l', col = 'grey')
+legend(range(target)[1], 1, legend = c('P(NEG|X=x)', 'P(POS|X=x)'), fill = c('blue', 'red'), cex = 0.7)
 
 
 ##### Multivariate Case -----
@@ -1949,8 +1949,8 @@ plot(target, col = col.lab, pch = 20)
 
 ###### Verify Assumptions ------
 
-mvn(target[false, ])$multivariateNormality
-mvn(target[true, ])$multivariateNormality
+mvn(target[neg, ])$multivariateNormality
+mvn(target[pos, ])$multivariateNormality
 
 # Normality is not respected for the "low" group
 
@@ -1959,7 +1959,7 @@ Pbart <- NULL
 rownames <- NULL
 for(i in 1:p)
 {
-    Pvt <- rbind(Pvt, var.test(target[false, i], target[true, i])$p.value)
+    Pvt <- rbind(Pvt, var.test(target[neg, i], target[pos, i])$p.value)
     Pbart <- rbind(Pbart, bartlett.test(target[, i], groups)$p.value)
     rownames <- cbind(rownames, paste(colnames(target)[i], "_F vs ", colnames(target)[i], "_T", sep = ''))
 }
@@ -1969,13 +1969,13 @@ dimnames(Pvt)[[2]] <- c("p-value")
 dimnames(Pbart)[[2]] <- c("p-value")
 Pvt
 Pbart
-# Note: when groups are 2, var.test is the same as bartlett.test!
+# Note: when groups are 2, var.test is basically the same as bartlett.test!
 
 summary(boxM(target, groups)) # !library(heplots)
 boxM(target, groups)$p.value
 
-list(SF = cov(target[false, ]), ST = cov(target[true, ]))
-abs(cov(target[false, ])/cov(target[true, ]))
+list(SF = cov(target[neg, ]), ST = cov(target[pos, ]))
+abs(cov(target[neg, ])/cov(target[pos, ]))
 
 
 ###### Perform Classification ------
@@ -1993,7 +1993,7 @@ G <- 2
 misc <- table(class.true = groups, class.assigned = lda.pred$class)
 APER <- 0
 for(g in 1:G)
-  APER <- APER + sum(misc[g,-g])/sum(misc[g,]) * prior[g] # priors NON adjusted! p(true)p(miscl.|true) + p(false)p(miscl.|false)
+  APER <- APER + sum(misc[g,-g])/sum(misc[g,]) * prior[g] # priors NON adjusted! p(pos)p(miscl.|pos) + p(neg)p(miscl.|neg)
 
 print(paste("APER:", APER))
 
@@ -2002,27 +2002,35 @@ ldaCV <- lda(target, groups, CV = TRUE, prior = prior.c)
 miscCV <- table(class.true = groups, class.assigned = ldaCV$class)
 AERCV <- 0
 for(g in 1:G)
-  AERCV <- AERCV + sum(miscCV[g,-g])/sum(miscCV[g,]) * prior[g] # priors NON adjusted! p(true)p(miscl.|true) + p(false)p(miscl.|false)
+  AERCV <- AERCV + sum(miscCV[g,-g])/sum(miscCV[g,]) * prior[g] # priors NON adjusted! p(pos)p(miscl.|pos) + p(neg)p(miscl.|neg)
 
 print(paste("AERCV:", AERCV))
 
 
 ###### Plot Classification Regions ------
 
-plot(target[, 3:4], xlab = colnames(target)[3], ylab = colnames(target)[4], pch = 20)
-points(target[false, 3:4], col = 'blue', pch = 20)
-points(target[true, 3:4], col = 'red', pch = 20)
+# (Second variable against the first)
+
+plot(target[, 1:2], xlab = colnames(target)[1], ylab = colnames(target)[2], pch = '')
+points(target[neg, 1:2], col = 'blue', pch = 20)
+points(target[pos, 1:2], col = 'red', pch = 20)
 legend('topright', legend = levels(groups), fill = c('blue', 'red'), cex = .7)
 
-points(lda$means[, 3:4], pch = 4, col = c('blue', 'red') , lwd = 2, cex = 1.5)
+points(lda$means[, 1:2], pch = 4, col = c('blue', 'red') , lwd = 2, cex = 1.5)
 
-x <- seq(min(target[, 3]), max(target[, 3]), length = 200)
-y <- seq(min(target[, 4]), max(target[, 4]), length = 200)
-xy <- expand.grid(V1 = x, V2 = y) ### !!! THIS DOES NOT WORK PROPERLY !!! ###
+x <- seq(min(target[, 1]), max(target[, 1]), length = 200)
+y <- seq(min(target[, 2]), max(target[, 2]), length = 200)
+xy <- expand.grid(V1 = x, V2 = y)
 
-z <- predict(lda, xy)$post  
-z1 <- z[, 1] - z[, 2] 
-z2 <- z[, 2] - z[, 1]  
+xy$V3 <- mean(target[, 3]) # !!! Do it only if p > 2 !!! #
+xy$V4 <- mean(target[, 4]) # !!! Do it only if p > 2 !!! #
+# Fix reasonably the coordinates of variables you don't want to plot 
 
-contour(x, y, matrix(z1, 200), levels = 0, drawlabels = F, add = T)  
-contour(x, y, matrix(z2, 200), levels = 0, drawlabels = F, add = T)
+colnames(xy) <- colnames(target)
+
+post <- predict(lda, xy)$post  
+post1 <- post[, 1] - post[, 2] 
+post2 <- post[, 2] - post[, 1]  
+
+contour(x, y, matrix(post1, 200), levels = 0, drawlabels = F, add = T)  
+contour(x, y, matrix(post2, 200), levels = 0, drawlabels = F, add = T)
