@@ -1844,8 +1844,6 @@ par(mfrow=c(1,1))
 ### SUPERVISED CLASSIFICATION ###----------------------------------------------------------
 ###---------------------------###
 
-#### LDA & QDA ----
-
 groups <- factor(data$class, labels = c('N','P'))
 col.lab <- ifelse(groups %in% c("P"), 'red', 'blue')
 
@@ -1854,6 +1852,7 @@ pos <- which(groups == "P")
 
 n <- dim(data)[1]
 
+#### LDA & QDA ----
 
 ##### Univariate Case -----
 
@@ -2034,3 +2033,101 @@ post2 <- post[, 2] - post[, 1]
 
 contour(x, y, matrix(post1, 200), levels = 0, drawlabels = F, add = T)  
 contour(x, y, matrix(post2, 200), levels = 0, drawlabels = F, add = T)
+
+
+##### Estimates -----
+
+TN <- miscCV[1, 1]
+FN <- miscCV[2, 1]
+FP <- miscCV[1, 2]
+TP <- miscCV[2, 2]
+
+total <- 200
+
+rbind("Budget", ((FP / (TN + FP)) * total * p.neg + (TP / (TP + FN)) * total * p.pos) * c.pn)
+
+prev_strategy_cost <- total * c.pn
+cur_strategy_cost <- (FP / (TN + FP)) * total * p.neg * c.pn + (FN / (TP + FN)) * total * p.pos * c.np
+
+rbind("Savings", prev_strategy_cost - cur_strategy_cost)
+
+
+#### Support Vector Machines (SVM) ----
+
+##### Linear Case -----
+
+target <- data[, c(1, 4)]
+
+# The classes are not separable
+plot(target, col = col.lab, pch = 19, asp = 1)
+
+# Fit the Support Vector Classifier (kernel = "linear")
+dat <- data.frame(x = target, y = groups)
+svmfit <- svm(y~., data = dat, kernel = 'linear', cost = 10, scale = FALSE) #!library(e1071)
+summary(svmfit)
+
+par(mfrow=c(1,2))
+plot(svmfit, dat, col = c('salmon', 'light blue'), pch = 19)
+par(mfrow=c(1,1))
+
+# Support vectors are indicated with crosses.
+# They are:
+svmfit$index
+
+n.g <- 100
+
+xgrid <- expand.grid(x.1 = seq(from = range(dat[, 1])[1], to = range(dat[, 1])[2],length = n.g),
+                     x.2 = seq(from = range(dat[, 2])[1], to = range(dat[, 2])[2],length = n.g))
+colnames(xgrid) <- colnames(dat)[1:2]
+ygrid <- predict(svmfit, xgrid)
+ygrid <- factor(ygrid, labels = c(0, 1)) # not necessary afterwards
+
+plot(xgrid, col = c("blue", "red")[as.numeric(ygrid)], pch = 20, cex = .2)
+points(target, col = col.lab, pch = 19)
+points(target[svmfit$index, ], pch = 5, cex = 2)
+
+plot(target, col = col.lab ,pch = 19)
+contour(seq(from = range(dat[, 1])[1], to = range(dat[, 1])[2], length = n.g),
+        seq(from = range(dat[, 2])[1], to = range(dat[, 2])[2], length = n.g),
+        matrix(as.numeric(ygrid), n.g, n.g), level = 1.5, add = TRUE, drawlabels = F)
+
+# Prediction for a new observation (command predict())
+
+testdat <- data.frame(x = cbind(6.75, 6) , y = as.factor("N"))
+colnames(testdat)[1:2] <- colnames(dat)[1:2]
+
+ypred <- predict(svmfit, testdat)
+table(true.label = testdat$y, assigned.label = ypred)
+
+points(testdat[, 1:2], col = c("blue", "red")[as.numeric(testdat$y)], pch = 4, lwd = 2, cex = 1.5)
+
+# To set the parameter C we can use the function tune(),
+# which is based on cross-validation (10-fold)
+set.seed(1)
+tune.out <- tune(svm, y~., data = dat, kernel = 'linear',
+                 ranges = list(cost = c(0.001 , 0.01, 0.1, 1, 5, 10, 100)))
+summary(tune.out)
+
+# Extract the best model from the result of tune
+bestmod <- tune.out$best.model
+summary(bestmod)
+
+# If the classes are separable, setting a high value for the cost function
+# leads to the maximal margin classifier (i.e., it returns the classification
+# provided by the best separating hyperplane)
+
+
+##### Non-linear Case -----
+
+target <- data[, c(2, 4)]
+
+plot(target, col = col.lab, pch = 19, asp = 1)
+
+# Fit the Support Vector Classifier (kernel = "radial") given a cost C
+dat <- data.frame(x = target, y = groups)
+svmfit <- svm(y~., data = dat, kernel = 'radial', gamma = 1, cost = 10)
+summary(svmfit)
+
+par(mfrow=c(1,2))
+plot(svmfit, dat, col = c('salmon', 'light blue'), pch = 19)
+par(mfrow=c(1,1))
