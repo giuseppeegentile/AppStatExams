@@ -2419,3 +2419,76 @@ for(k in 1:4)
 
 plot(1:4, Stressk, xlab = 'k', ylab = 'Stress', lwd = 2)
 lines(1:4, Stressk, type = 'b', lwd = 2)
+
+
+###------------###
+### REGRESSION ###------------------------------------------------------
+###------------###
+
+#### Linear Models ----
+
+# Fast way to write the formula (copy-paste the names row)
+
+head(data)
+n <- dim(data)[1]
+
+##### Parameters Estimation -----
+
+m0 <- lm(target ~ reg1 + reg2 + reg3 + dummy, data = data)
+summary(m0)
+# Note: pay attention when dummy assumes numeric values;
+# factorize it: as.factor(dummy)
+
+m0$fitted        # y hat
+m0$residuals     # eps hat
+
+m0$coefficients  # beta_i
+vcov(m0)         # cov(beta_i)
+
+m0$rank # order of the model [r+1]
+m0$df   # degrees of freedom of the residuals [n-(r+1)]
+
+hatvalues(m0) # h_ii (or sometimes called "leverage")
+# They quantify:
+# 1) How far is the i-th observation from the other ones in the features space
+# 2) The influence of the i-th observation on the fit (can be seen as the
+# derivative dyhat_i / dy_i)
+
+rstandard(m0) # standardized residuals: eps_j / sqrt(s^2*(1-h_ii))
+
+sum((m0$residuals)^2)/m0$df  # s^2 estimate of sigma^2
+
+
+##### Inference on the Parameters -----
+
+linearHypothesis(m0,
+                 rbind(c(0,0,1,0,0),
+                       c(0,0,0,0,1)),
+                 c(0,0)) #!library(car)
+
+p <- 2  # number of tested coefficients
+r <- 4  # number of regressors
+
+# Confidence Region
+c(m0$coefficients[3], m0$coefficients[5]) # center
+eigen(vcov(m0)[c(3, 5), c(3, 5)])$vectors # direction of the axes
+
+plot(m0$coefficients[3], m0$coefficients[5], 
+     xlim = c(-m0$coefficients[3], 3*m0$coefficients[3]), asp = 1, 
+     xlab = 'beta[1]', ylab = 'beta[2]')
+ellipse(c(m0$coefficients[3], m0$coefficients[5]), vcov(m0)[c(3, 5), c(3, 5)], sqrt(p*qf(1-0.05, p, n-(r+1))))
+abline(v = 0)
+abline(h = 0)
+
+# Bonferroni intervals (level 95%)
+Bf <- rbind(beta1 = c(m0$coefficients[3]-sqrt(vcov(m0)[3, 3])*qt(1-0.05/(2*p), n-(r+1)),
+                      m0$coefficients[3]+sqrt(vcov(m0)[3, 3])*qt(1-0.05/(2*p), n-(r+1))),
+            beta2 = c(m0$coefficients[5]-sqrt(vcov(m0)[5, 5])*qt(1-0.05/(2*p), n-(r+1)),
+                      m0$coefficients[5]+sqrt(vcov(m0)[5, 5])*qt(1-0.05/(2*p), n-(r+1))))
+Bf
+
+# or (only for intervals on beta)
+confint(m0, level = 1-0.05/p)[c(3, 5), ]  # Bonferroni correction!
+# Note: confint() returns the confidence intervals one-at-a-time;
+# to have a global level 95% we need to include a correction
+
