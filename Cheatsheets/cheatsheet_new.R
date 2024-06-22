@@ -2461,6 +2461,8 @@ sum((m0$residuals)^2)/m0$df  # s^2 estimate of sigma^2
 
 ##### Inference on the Parameters -----
 
+# H0: (beta2, beta4) == (0, 0) vs H1: (beta2, beta4) != (0, 0)
+
 linearHypothesis(m0,
                  rbind(c(0,0,1,0,0),
                        c(0,0,0,0,1)),
@@ -2470,25 +2472,89 @@ p <- 2  # number of tested coefficients
 r <- 4  # number of regressors
 
 # Confidence Region
+
 c(m0$coefficients[3], m0$coefficients[5]) # center
 eigen(vcov(m0)[c(3, 5), c(3, 5)])$vectors # direction of the axes
 
 plot(m0$coefficients[3], m0$coefficients[5], 
      xlim = c(-m0$coefficients[3], 3*m0$coefficients[3]), asp = 1, 
-     xlab = 'beta[1]', ylab = 'beta[2]')
+     xlab = 'beta[2]', ylab = 'beta[4]')
 ellipse(c(m0$coefficients[3], m0$coefficients[5]), vcov(m0)[c(3, 5), c(3, 5)], sqrt(p*qf(1-0.05, p, n-(r+1))))
 abline(v = 0)
 abline(h = 0)
 
 # Bonferroni intervals (level 95%)
-Bf <- rbind(beta1 = c(m0$coefficients[3]-sqrt(vcov(m0)[3, 3])*qt(1-0.05/(2*p), n-(r+1)),
-                      m0$coefficients[3]+sqrt(vcov(m0)[3, 3])*qt(1-0.05/(2*p), n-(r+1))),
-            beta2 = c(m0$coefficients[5]-sqrt(vcov(m0)[5, 5])*qt(1-0.05/(2*p), n-(r+1)),
-                      m0$coefficients[5]+sqrt(vcov(m0)[5, 5])*qt(1-0.05/(2*p), n-(r+1))))
-Bf
+
+BF.I <- rbind(beta2 = c(m0$coefficients[3] - sqrt(vcov(m0)[3, 3])*qt(1-0.05/(2*p), n-(r+1)),
+                        m0$coefficients[3] + sqrt(vcov(m0)[3, 3])*qt(1-0.05/(2*p), n-(r+1))),
+              beta4 = c(m0$coefficients[5] - sqrt(vcov(m0)[5, 5])*qt(1-0.05/(2*p), n-(r+1)),
+                        m0$coefficients[5] + sqrt(vcov(m0)[5, 5])*qt(1-0.05/(2*p), n-(r+1))))
+BF.I
 
 # or (only for intervals on beta)
+
 confint(m0, level = 1-0.05/p)[c(3, 5), ]  # Bonferroni correction!
 # Note: confint() returns the confidence intervals one-at-a-time;
 # to have a global level 95% we need to include a correction
 
+# H0: (beta2+beta4, beta3) == (0,0) vs H1: (beta2+beta4, beta3) != (0,0)
+
+C <- rbind(c(0,0,1,0,1),
+           c(0,0,0,1,0))
+
+linearHypothesis(m0, C, c(0,0))
+
+p <- 2  # number of tested coefficients
+r <- 4  # number of regressors
+
+# Confidence Region
+
+center <- C %*% m0$coefficients
+shape <- C %*% vcov(m0) %*% t(C)
+
+eigen(shape)$vectors # direction of the axes
+
+plot(center[1], center[2], 
+     xlim = c(-10, 20), asp = 1, 
+     xlab = 'beta[2]+beta[4]', ylab = 'beta[3]')
+ellipse(c(center), shape, sqrt(p*qf(1-0.05, p, n-(r+1))))
+abline(v = 0)
+abline(h = 0)
+
+# Bonferroni intervals (level 95%)
+
+BF.I <- rbind(beta2.4 = c(center[1] - sqrt(t(C[1, ]) %*% vcov(m0) %*% C[1, ]) * qt(1-0.05/(2*p), n-(r+1)),
+                          center[1] + sqrt(t(C[1, ]) %*% vcov(m0) %*% C[1, ]) * qt(1-0.05/(2*p), n-(r+1))),
+              beta3 = c(center[2] - sqrt(t(C[2, ]) %*% vcov(m0) %*% C[2, ]) * qt(1-0.05/(2*p), n-(r+1)),
+                        center[2] + sqrt(t(C[2, ]) %*% vcov(m0) %*% C[2, ]) * qt(1-0.05/(2*p), n-(r+1))))
+colnames(BF.I) <- c("inf", "sup")
+BF.I
+
+# or
+
+BF.I <- rbind(beta2.4 = c(center[1] - sqrt(shape[1, 1]) * qt(1-0.05/(2*p), n-(r+1)),
+                          center[1] + sqrt(shape[1, 1]) * qt(1-0.05/(2*p), n-(r+1))),
+              beta3 = c(center[2] - sqrt(shape[2, 2]) * qt(1-0.05/(2*p), n-(r+1)),
+                        center[2] + sqrt(shape[2, 2]) * qt(1-0.05/(2*p), n-(r+1))))
+colnames(BF.I) <- c("inf", "sup")
+BF.I
+
+# or
+
+BF.I <- rbind(inf = c(center - sqrt(diag(shape)) * qt(1-0.05/(2*p), n-(r+1))),
+              sup = c(center + sqrt(diag(shape)) * qt(1-0.05/(2*p), n-(r+1))))
+colnames(BF.I) <- c("beta[2]+beta[4]", "beta[3]")
+BF.I
+
+
+##### Prediction -----
+
+new.datum <- data.frame(reg1 = 1, reg2 = 2, reg3 = 3, dummy = "T")
+
+# Conf. int. for the mean
+Conf <- predict(m0, new.datum, interval = 'confidence', level = 1-0.05)  
+Conf
+
+# Pred. int. for a new obs
+Pred <- predict(m0, new.datum, interval = 'prediction', level = 1-0.05) 
+Pred
