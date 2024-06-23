@@ -85,9 +85,9 @@ data$feature <- factor(data$feature, labels = c('F','T'))
 # (If you want to specify the "labels" argument, pay attention to write the labels
 # in the alphabetical order of the original ones in order to get the correct mapping)
 
-F1 <- factor(data$feature1, labels=c('F','T'))
-F2 <- factor(data$feature2, labels=c('F','T'))
-F1F2 <- factor(paste(F1, F2, sep=''))
+F1 <- factor(data$feature1, labels = c('F','T'))
+F2 <- factor(data$feature2, labels = c('F','T'))
+F1F2 <- factor(paste(F1, F2, sep = ''))
 
 data.label <- data[, "feature_name"]
 data <- data[, !colnames(data) %in% "feature_name"]
@@ -2439,7 +2439,7 @@ summary(m0)
 # Note: pay attention when dummy assumes numeric values;
 # factorize it: as.factor(dummy)
 
-m0$fitted        # y hat
+m0$fitted        # y hat (i.e. cbind(rep(1, n), data) %*% m0$coef
 m0$residuals     # eps hat
 
 m0$coefficients  # beta_i
@@ -2558,3 +2558,123 @@ Conf
 # Pred. int. for a new obs
 Pred <- predict(m0, new.datum, interval = 'prediction', level = 1-0.05) 
 Pred
+
+
+##### Diagnostic -----
+
+par(mfrow=c(2,2))
+plot(m0)
+par(mfrow=c(1,1))
+
+shapiro.test(m0$residuals)
+
+# Residuals vs. Regressors
+
+par(mfrow=c(2,r/2+r%%2))
+
+for(i in 1:r)
+{
+  plot(data[, i], m0$residuals, xlab = colnames(data)[i], pch = 19)
+  abline(h = 0)
+}
+
+par(mfrow=c(1,1))
+plot(m0$fitted, m0$residuals, pch = 19)
+
+# Collinearity
+
+# Variance Inflation Factor
+
+vif(m0) # Rule of thumb -> problem when VIF exceeds 10 (or 5 sometimes) #!library(car)
+
+
+###### PCA Regression ------
+
+pc.data <- princomp(cbind(data$reg1, data$reg2, data$reg3), scores = TRUE)
+summary(pc.data)
+pc.data$load
+
+reg1.pc <- pc.data$scores[, 1]
+reg2.pc <- pc.data$scores[, 2]
+reg3.pc <- pc.data$scores[, 3]
+
+m1.pc <- lm(target ~ reg1.pc + reg2.pc + reg3.pc + dummy, data = data)
+
+summary(m1.pc)
+
+plot(reg1.pc, data$target, xlab = 'PC1', ylab = 'Target variable', las = 1)
+x <- seq(range(reg1.pc)[1], range(reg1.pc)[2], length = 500)
+lines(x, m1.pc$coef[1] + m1.pc$coef[2]*x)
+
+# Coefficients of the model which used the original regressors
+
+regressors <- c("reg1_name", "reg2_name", "reg3_name")
+means <- colMeans(data[, colnames(data) %in% regressors])
+k <- 3 # number of PCs you want to take (<= length(regressors))
+# Note: "regressors" are only the ones taking real values (no dummies)
+
+beta0 <- m1.pc$coef[1]
+beta <- rep(0, length = length(means))
+names(beta) <- names(means)
+for(i in 1:length(means))
+{
+  for(j in 1:k)
+  {
+    beta0 <- beta0 - m1.pc$coef[j+1] * pc.data$load[i, j] * means[i]
+    beta[i] <- beta[i] + m1.pc$coef[j+1] * pc.data$load[i, j]
+  }
+}
+
+
+###### Ridge/Lasso Regression ------
+
+set.seed(20240623)
+
+# Build the matrix of predictors
+x <- model.matrix(target ~ reg1 + reg2 + reg3 + dummy, data = data)[, -1]
+# Build the vector of response
+y <- data$target
+
+# Let's set a grid of candidate lambda's for the estimate
+lambda.grid <- 10^seq(1, -2, length = 100)
+fit.regularized <- glmnet(x, y, alpha = 1, lambda = lambda.grid) #!library(glmnet)
+# Note: "alpha" is the elasticnet mixing parameter, with 0 <= alpha <= 1.
+# The penalty is defined as: (1-alpha)/2 * ||beta||2_2 + alpha * ||beta||_1;
+# by default, alpha = 1 -> lasso (if alpha = 0 -> ridge regression)
+
+par(mfrow=c(1,1))
+plot(fit.regularized, xvar = 'lambda', label = TRUE, col = rainbow(dim(x)[2]))
+legend('topright', dimnames(x)[[2]], col = rainbow(dim(x)[2]), lty = 1, cex = 1)
+
+# Let's set lambda via cross validation
+cv.regularized <- cv.glmnet(x, y, alpha = 1, lambda = lambda.grid) # default: 10-fold CV
+cv.regularized
+
+bestlam.regularized <- cv.regularized$lambda.min
+bestlam.regularized
+
+optlam.regularized <- cv.regularized$lambda.1se # maximum lambda that has its cross-validation mse inside the confidence interval of the mse of lambda.min
+optlam.regularized
+
+plot(cv.regularized)
+abline(v = log(bestlam.regularized), lty = 1)
+abline(v = log(optlam.regularized), lty = 1)
+
+fit.best <- glmnet(x, y, alpha = 1, lambda = bestlam.regularized)
+
+coef.best <- predict(fit.best, type = 'coefficients')[1:(r+1), ]
+coef.best[which(coef.best != 0)]
+
+coef.opt <- predict(fit.regularized, s = optlam.regularized, type = 'coefficients')[1:(r+1), ]
+coef.opt[which(coef.opt != 0)]
+
+mse.min <- mean((y - predict(fit.best, x))^2) # Wrong
+mse.min <- mean((y - predict(cv.regularized, x, s = bestlam.regularized))^2) # Wrong (same as before)
+
+mse.min <- cv.regularized$cvm[cv.regularized$lambda == bestlam.regularized] # Right
+mse.min <- min(cv.regularized$cvm) # Right (same as before)
+mse.min
+
+# The discrepancy arises because the mean squared error (MSE) you are 
+# calculating using mean((y - fitted_values)^2) is based on the entire dataset, 
+# while the MSE reported in the cv.glmnet output is obtained through cross-validation
