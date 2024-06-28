@@ -1046,6 +1046,14 @@ T2.I.F2 <- c(data1.mean[2] - data2.mean[2] - sqrt(cfr.fisher * Sp[2, 2] * (1 / n
 
 T2.I <- rbind(T2.I.F1, T2.I.F2)
 dimnames(T2.I)[[2]] <- c('inf', 'center', 'sup')
+dimnames(T2.I)[[1]] <- colnames(data1)
+T2.I
+
+# or
+
+T2.I <- cbind(inf = data1.mean - data2.mean - sqrt(cfr.fisher * diag(Sp) * (1 / n1 + 1 / n2)),
+              center = data1.mean - data2.mean,
+              sup = data1.mean - data2.mean + sqrt(cfr.fisher * diag(Sp) * (1 / n1 + 1 / n2)))
 T2.I
 
 # Bonferroni intervals
@@ -1062,6 +1070,14 @@ BF.I.F2 <- c(data1.mean[2] - data2.mean[2] - cfr.t * sqrt(Sp[2, 2] * (1 / n1 + 1
 
 BF.I <- rbind(BF.I.F1, BF.I.F2)
 dimnames(BF.I)[[2]] <- c('inf', 'center', 'sup')
+dimnames(BF.I)[[1]] <- colnames(data1)
+BF.I
+
+# or
+
+BF.I <- cbind(inf = data1.mean - data2.mean - cfr.t * sqrt(diag(Sp) * (1 / n1 + 1 / n2)),
+              center = data1.mean - data2.mean,
+              sup = data1.mean - data2.mean + cfr.t * sqrt(diag(Sp) * (1 / n1 + 1 / n2)))
 BF.I
 
 
@@ -1512,7 +1528,7 @@ treatments
 
 g <- length(levels(treatment1)) # number of factor1 levels
 b <- length(levels(treatment2)) # number of factor2 levels
-n <- dim(target)[1]/(g*b) # group sizes
+n <- length(target)/(g*b) # group sizes
 treats <- levels(treatments)
 
 M <- mean(target) # overall mean
@@ -1896,8 +1912,8 @@ lda
 # Posterior probability for a grid of x's
 
 head(predict(lda, x)$posterior)
-LDA.F <- predict(lda, x)$posterior[, 1]
-LDA.T <- predict(lda, x)$posterior[, 2]
+LDA.N <- predict(lda, x)$posterior[, 1]
+LDA.P <- predict(lda, x)$posterior[, 2]
 
 plot(target[neg], rep(0, length(neg)), pch = 16, col = 'blue', xlim = range(x), ylim = c(0, 1),
      xlab = 'x', ylab = 'estimated posterior', main = "LDA")
@@ -1909,9 +1925,9 @@ points(c(mean(range(target)), mean(range(target))), c(predict(lda, data.frame(ta
 predict(lda, x)$class
 predict(lda, mean(range(target)))$class
 
-lines(x[, 1], LDA.F, type = 'l', col = 'blue',
+lines(x[, 1], LDA.N, type = 'l', col = 'blue',
       xlab = 'x', ylab = 'estimated posterior', main = "LDA")
-lines(x[, 1], LDA.T, type = 'l', col = 'red')
+lines(x[, 1], LDA.P, type = 'l', col = 'red')
 abline(h = 0.5)
 legend(range(target)[1], 1, legend = c('P(NEG|X=x)', 'P(POS|X=x)'), fill = c('blue', 'red'), cex = 0.7)
 
@@ -1920,12 +1936,12 @@ legend(range(target)[1], 1, legend = c('P(NEG|X=x)', 'P(POS|X=x)'), fill = c('bl
 lda.p <- lda(data.frame(target), groups, prior = prior.c)
 lda.p
 
-LDA.F.p <- predict(lda.p, x)$posterior[,1]
-LDA.T.p <- predict(lda.p, x)$posterior[,2]
+LDA.N.p <- predict(lda.p, x)$posterior[,1]
+LDA.P.p <- predict(lda.p, x)$posterior[,2]
 
-plot(x[, 1], LDA.F.p, type = 'l', col = 'blue', xlim = range(x), ylim = c(0,1),
+plot(x[, 1], LDA.N.p, type = 'l', col = 'blue', xlim = range(x), ylim = c(0,1),
      xlab = 'x', ylab = 'estimated posterior', main = "LDA")
-points(x[ ,1], LDA.T.p, type = 'l', col = 'red')
+points(x[ ,1], LDA.P.p, type = 'l', col = 'red')
 abline(h = 0.5)
 points(target[neg], rep(0, length(neg)), pch = 16, col = 'blue')
 points(target[pos], rep(0, length(pos)), pch = 16, col = 'red')
@@ -1933,8 +1949,8 @@ abline(v = mean(range(target)), col = 'grey')
 points(c(mean(range(target)), mean(range(target))), c(predict(lda.p, data.frame(target = mean(range(target))))$posterior),
        col = c('blue', 'red'), pch = '*', cex = 2.5)
 
-points(x[, 1], LDA.F, type = 'l', col = 'grey')
-points(x[, 1], LDA.T, type = 'l', col = 'grey')
+points(x[, 1], LDA.N, type = 'l', col = 'grey')
+points(x[, 1], LDA.P, type = 'l', col = 'grey')
 legend(range(target)[1], 1, legend = c('P(NEG|X=x)', 'P(POS|X=x)'), fill = c('blue', 'red'), cex = 0.7)
 
 
@@ -1951,8 +1967,6 @@ plot(target, col = col.lab, pch = 20)
 mvn(target[neg, ])$multivariateNormality
 mvn(target[pos, ])$multivariateNormality
 
-# Normality is not respected for the "low" group
-
 Pvt <- NULL
 Pbart <- NULL
 rownames <- NULL
@@ -1960,7 +1974,7 @@ for(i in 1:p)
 {
     Pvt <- rbind(Pvt, var.test(target[neg, i], target[pos, i])$p.value)
     Pbart <- rbind(Pbart, bartlett.test(target[, i], groups)$p.value)
-    rownames <- cbind(rownames, paste(colnames(target)[i], "_F vs ", colnames(target)[i], "_T", sep = ''))
+    rownames <- cbind(rownames, paste(colnames(target)[i], "_N vs ", colnames(target)[i], "_P", sep = ''))
 }
 dimnames(Pvt)[[1]] <- rownames
 dimnames(Pbart)[[1]] <- rownames
@@ -1982,6 +1996,15 @@ abs(cov(target[neg, ])/cov(target[pos, ]))
 lda <- lda(target, groups, prior = prior.c)
 lda
 
+###### Parameters Estimation ------
+
+lda$means
+colMeans(target[pos, ])
+colMeans(target[neg, ])
+
+Spooled <- 1/(n-2) * ((cov(target[neg, ])) * (table(groups)["N"] - 1) + (cov(target[pos, ])) * (table(groups)["P"] - 1))
+Spooled # for LDA
+
 
 ###### Evaluation ------
 
@@ -1996,6 +2019,15 @@ for(g in 1:G)
 
 print(paste("APER:", APER))
 
+# or (if no priors)
+
+errors <- (lda.pred$class != groups)
+
+APER   <- sum(errors)/length(species.name)
+APER
+
+# -
+
 ldaCV <- lda(target, groups, CV = TRUE, prior = prior.c)
 
 miscCV <- table(class.true = groups, class.assigned = ldaCV$class)
@@ -2004,6 +2036,13 @@ for(g in 1:G)
   AERCV <- AERCV + sum(miscCV[g,-g])/sum(miscCV[g,]) * prior[g] # priors NON adjusted! p(pos)p(miscl.|pos) + p(neg)p(miscl.|neg)
 
 print(paste("AERCV:", AERCV))
+
+# or (if no priors)
+
+errorsCV <- (ldaCV$class != groups)
+
+AERCV <- sum(errorsCV) / length(groups)
+AERCV
 
 
 ###### Plot Classification Regions ------
@@ -2050,6 +2089,60 @@ prev_strategy_cost <- total * c.pn
 cur_strategy_cost <- (FP / (TN + FP)) * total * p.neg * c.pn + (FN / (TP + FN)) * total * p.pos * c.np
 
 rbind("Savings", prev_strategy_cost - cur_strategy_cost)
+
+
+#### k-Nearest Neighbors (kNN) ----
+
+##### Univariate Case -----
+
+target <- data$target
+
+plot(target, rep(0, n), col = col.lab, pch = 20)
+
+x <- data.frame(target = seq(range(target)[1] - diff(range(target))/5, range(target)[2] + diff(range(target))/5, diff(range(target))/100))
+
+k <- 3
+knn <- knn(train = target, test = x, cl = groups, k = k, prob = T) #!library(class)
+knn.class <- knn == 'P'
+knn.P <- ifelse(knn.class == 1, attributes(knn)$prob, 1 - attributes(knn)$prob)
+
+plot(x[, 1], LDA.P, type = 'l', col = 'red', lty = 2, xlab = 'x', ylab = 'Estimated Posterior')
+points(x[, 1], knn.P, type = 'l', col = 'black', lty = 1)
+abline(h = 0.5)
+legend(range(target)[1] - diff(range(target))/5, 0.25, legend = c('LDA', 'knn'), lty = c(2, 1), col = c('red','black'))
+
+# let's change k
+par(mfrow=c(3, 4))
+for(k in 1:12)
+{
+  knn <- knn(train = target, test = x, cl = groups, k = k, prob = T)
+  knn.class <- knn == 'P'
+  knn.P <- ifelse(knn.class == 1, attributes(knn)$prob, 1 - attributes(knn)$prob)
+  
+  plot(x[, 1], LDA.P, type = 'l', col = 'red', lty = 2, xlab = 'x', ylab = 'Estimated Posterior', main = k)
+  points(x[, 1], knn.P, type = 'l', col = 'black', lty = 1, lwd = 2)
+  abline(h = 0.5)
+}
+par(mfrow=c(1,1))
+
+
+##### Bivariate Case -----
+
+target <- data[, 3:4]
+p <- dim(target)[2]
+
+plot(target, col = col.lab, pch = 20)
+
+x <- seq(min(target[, 1]), max(target[, 1]), length = 200)
+y <- seq(min(target[, 2]), max(target[, 2]), length = 200)
+xy <- expand.grid(V1 = x, V2 = y)
+
+k <- 3
+knn <- knn(train = target, test = xy, cl = groups, k = k)
+
+z <- as.numeric(knn)
+
+contour(x, y, matrix(z, 200), levels = c(1.5), drawlabels = F, add = T)
 
 
 #### Support Vector Machines (SVM) ----
@@ -2138,6 +2231,8 @@ par(mfrow=c(1,1))
 ###------------###
 
 n <- dim(data)[1]
+
+plot(data, pch = 19)
 
 
 #### Hierarchical Clustering ----
@@ -2277,6 +2372,8 @@ threshold <- 2.75
 # Run the dbscan
 dbs <- dbscan(data, eps = threshold, minPts = minPts)
 dbs
+
+table(dbs$cluster)
 
 # Plot of the resulting clustering
 plot(data, col = dbs$cluster + 1, pch = 16, lwd = 2)
@@ -2570,7 +2667,7 @@ shapiro.test(m0$residuals)
 
 # Residuals vs. Regressors
 
-par(mfrow=c(2,r/2+r%%2))
+par(mfrow=c(2,floor(r/2)+r%%2))
 
 for(i in 1:r)
 {
