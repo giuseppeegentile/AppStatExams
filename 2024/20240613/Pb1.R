@@ -40,8 +40,13 @@ for(i in 1:dim(data)[1])
 n <- dim(data)[1]
 q <- dim(data)[2]
 
-C <- matrix(c(-1, 1, 0,
-              -1, 0, 1), q-1, q, byrow = T)
+M
+# t1 t2 t3 
+# 77 76 69
+# It seems like the third taster tends to underprice the bottles compared to the two others
+
+C <- matrix(c(1, 0, -1,
+              0, 1, -1), q-1, q, byrow = T)
 C
 
 alpha <- .05
@@ -55,7 +60,7 @@ T2 <- n * t(Md - delta.0) %*% Sdinv %*% (Md - delta.0)
 cfr.fisher <- ((q - 1) * (n - 1) / (n - (q - 1))) * qf(1 - alpha, (q - 1), n - (q - 1)) 
 
 T2 < cfr.fisher
-# Yes, there's a taster which over/under-prices the bottles compared to the two others
+# Yes, the third taster under-prices the bottles compared to the two others
 
 P <- 1 - pf(T2 * (n - (q - 1)) / ((q - 1) * (n - 1)), (q - 1), n - (q - 1))
 P
@@ -64,12 +69,25 @@ P
 
 # c) ----------------------------------------------------------------------
 
-diff <- cbind(data[, 2] - data[, 1], data[, 3] - data[, 1])
+C.bis <- matrix(c(1, -1, 0,
+                  1, 0, -1), q-1, q, byrow = T)
+C.bis
+
+alpha <- .05
+delta.0 <- c(0, 0)
+
+Md.bis <- C.bis %*% M 
+Sd.bis <- C.bis %*% S %*% t(C.bis) 
+Sdinv.bis <- solve(Sd.bis)
+
+cfr.fisher <- ((q - 1) * (n - 1) / (n - (q - 1))) * qf(1 - alpha, (q - 1), n - (q - 1)) 
+
+diff <- cbind(data[, 1] - data[, 2], data[, 1] - data[, 3])
 
 plot(diff[, 1], diff[, 2], asp = 1, pch = 19, xlim = c(-20, 20))
 points(colMeans(diff)[1], colMeans(diff)[2], col = 'red', pch = 9, cex = 1)
 
-ellipse(center = c(Md), shape = Sd/n, radius = sqrt(cfr.fisher), lwd = 2, col = 'grey', center.cex = 1.25)
+ellipse(center = c(Md.bis), shape = Sd.bis/n, radius = sqrt(cfr.fisher), lwd = 2, col = 'grey', center.cex = 1.25)
 abline(h = 0)
 abline(v = 0)
 
@@ -79,15 +97,15 @@ abline(v = 0)
 k <- q-1   # number of increments (i.e., dim(C)[1])
 cfr.t <- qt(1 - alpha/(2*k), n-1)
 
-BF.I <- cbind(Md - cfr.t * sqrt(diag(Sd)/n),
-              Md,
-              Md + cfr.t * sqrt(diag(Sd)/n))
+BF.I <- cbind(Md.bis - cfr.t * sqrt(diag(Sd.bis)/n),
+              Md.bis,
+              Md.bis + cfr.t * sqrt(diag(Sd.bis)/n))
 dimnames(BF.I)[[2]] <- c('inf', 'center', 'sup')
 dimnames(BF.I)[[1]] <- c('t1-t2', 't1-t3')
 BF.I
-#              inf center       sup
-# t1-t2  -5.819742     -1  3.819742
-# t1-t3 -13.730819     -8 -2.269181
+#             inf center       sup
+# t1-t2 -3.819742      1  5.819742
+# t1-t3  2.269181      8 13.730819
 
 
 # Extra -------------------------------------------------------------------
@@ -97,9 +115,8 @@ pdf(file = "CR.pdf", onefile = T)
 plot(diff[, 1], diff[, 2], asp = 1, pch = 19, xlim = c(-20, 20))
 points(colMeans(diff)[1], colMeans(diff)[2], col = 'red', pch = 9, cex = 1)
 
-ellipse(center = c(Md), shape = Sd/n, radius = sqrt(cfr.fisher), lwd = 2, col = 'grey', center.cex = 1.25)
+ellipse(center = c(Md.bis), shape = Sd.bis/n, radius = sqrt(cfr.fisher), lwd = 2, col = 'grey', center.cex = 1.25)
 abline(h = 0)
 abline(v = 0)
 
 dev.off()
-
