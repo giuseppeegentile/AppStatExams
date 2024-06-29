@@ -3,12 +3,12 @@ TDE grouped by main argument
 ----------------------------
 
 PCA: Feb23_Pb1, Lug23_Pb1, Nov23_Pb2, Gen24_Pb2;
-Inference About the Mean: Gen23_Pb1, Lug23_Pb2, Set23_Pb1
+Inference About the Mean: Gen23_Pb1, Lug23_Pb2, Set23_Pb1, Giu24_Pb1
 (M)ANOVA: Giu23_Pb1, Feb24_Pb1
 Classification: Feb23_Pb2, Set23_Pb2, Feb24_Pb2
 Clustering: Gen23_Pb2, Giu23_Pb2, Nov23_Pb1, Gen24_Pb1
 Linear Models: Feb23_Pb3, Lug23_Pb3, Nov23_Pb3
-Linear Mixed Models: Gen23_Pb3, Giu23_Pb3, Set23_Pb3, Gen24_Pb3, Feb24_pb3
+Linear Mixed Models: Gen23_Pb3, Giu23_Pb3, Set23_Pb3, Gen24_Pb3, Feb24_Pb3, Giu24_Pb2
 
 
 -----------
@@ -69,3 +69,9 @@ Pb3: LMM w/ Heteroschedasticity and Correlation (+ Trend Visualization, Variogra
 Pb1: MANOVA 2-Ways, Bonferroni Intervals on the Additive Model
 Pb2: LDA/QDA, APER and AERCV
 Pb3: LMM w/ Correlation and Randomness (+ Residuals vs. Regressors Plot)
+
+
+>>> Giugno 2024
+
+Pb1: Repeated Measurements / Paired Data, Gaussianity, Confidence Region, Bonferroni Intervals
+Pb2: LMM w/ Random Intercept & Random Slope, PVRE, Fixed + Random Effects
