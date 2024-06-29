@@ -1,8 +1,8 @@
 # NOME COGNOME
 
-# Exam DATA
+# Exam 07/11/2023
 
-# Exercise NUM_ESERCIZIO
+# Exercise 1
 
 library(MASS)
 library(car)
