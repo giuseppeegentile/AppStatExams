@@ -386,6 +386,9 @@ bc.x <- bcPower(x, lambda.x$lambda[1]) #!library(car)
 
 hist(bc.x)
 
+exp(log(lambda.x$lambda[1] * bc.x + 1) / lambda.x$data[1]) # Inverse Transformation (lambda != 0)
+exp(bc.x) # Inverse Transformation (lambda = 0)
+
 lambda.data <- powerTransform(data)
 BC1 <- bcPower(data[, "feature1_name"], lambda.data$lambda[1])
 BC2 <- bcPower(data[, "feature2_name"], lambda.data$lambda[2])
@@ -1249,25 +1252,30 @@ summary(fit)
 
 # Which treatment level is responsible for this?
 
+dofs <- fit$df.residual # n-g
+
 k <- g * (g - 1) / 2
 alpha <- 0.05
 
+qT <- qt(1 - alpha/(2*k), dofs)
+
 Mediag <- tapply(target, treatment, mean)
 SSres <- sum(residuals(fit) ^ 2)
-S <- SSres / (n - g)
+S <- SSres / dofs
 
 CI.range <- NULL
 for(i in 1:(g-1)) 
 {
   for(j in (i+1):g) 
   {
-    print(paste(treat[i], "-", treat[j]))        
-    print(as.numeric(c(Mediag[i] - Mediag[j] - qt(1 - alpha/(2*k), n-g) * sqrt(S * (1/ng[i] + 1/ng[j])),
-                       Mediag[i] - Mediag[j] + qt(1 - alpha/(2*k), n-g) * sqrt(S * (1/ng[i] + 1/ng[j])))))
-    CI.range <- rbind(CI.range, as.numeric(c(Mediag[i]-Mediag[j] - qt(1 - alpha/(2*k), n-g) * sqrt(S * (1/ng[i] + 1/ng[j])),
-                                             Mediag[i]-Mediag[j] + qt(1 - alpha/(2*k), n-g) * sqrt(S * (1/ng[i] + 1/ng[j])))))
+    inf <- Mediag[i] - Mediag[j] - qT * sqrt(S * (1/ng[i] + 1/ng[j]))
+    sup <- Mediag[i] - Mediag[j] + qT * sqrt(S * (1/ng[i] + 1/ng[j]))
+    interval_i <- cbind(inf, sup)
+    rownames(interval_i) <- paste(treat[i], "-", treat[j])
+    CI.range <- rbind(CI.range, interval_i)
   }
 }
+CI.range
 
 h <- 1
 plot(c(1, g*(g-1)/2), range(CI.range), pch = '', xlab = 'Pairs Treat', ylab = 'Conf. Int. tau Target')
@@ -1450,6 +1458,8 @@ summary.aov(fit)
 
 ##### Confidence Intervals -----
 
+fit$df.
+
 alpha <- 0.05
 k <- p * g * (g - 1) / 2
 qT <- qt(1 - alpha/(2 * k), n - g)
@@ -1520,8 +1530,8 @@ par(mfrow=c(1,1))
 
 target <- data$target
 
-treatment1 <- factor(data$treatment1) 
-treatment2 <- factor(data$treatment2) 
+treatment1 <- factor(data$treatment1, labels = c('LvA', 'LvB', 'LvC')) 
+treatment2 <- factor(data$treatment2, labels = c('LvX', 'LvY', 'LvZ')) 
 
 treatments <- factor(paste(treatment1, treatment2, sep=''))
 treatments
@@ -1617,16 +1627,162 @@ summary.aov(fit.aov2.int)
 fit.aov2.ad <- aov(target ~ treatment1 + treatment2)
 summary.aov(fit.aov2.ad)
 
-# Note: These aren't the only tests we can do!
-# Example: global test for the joint significance of the two treatments 
-#          (model without interaction)
-SS.treat1 <- sum(n * b * (M.treat1 - M) ^ 2)              
-SS.treat2 <- sum(n * g * (M.treat2 - M) ^ 2)             
-SSres <- sum((target - M) ^ 2) - (SS.treat1 + SS.treat2)   
 
-Ftot <- ((SS.treat1 + SS.treat2) / (g - 1 + b - 1)) / (SSres / (n * g * b - g - b + 1))
-Ptot <- 1 - pf(Ftot, (g - 1) + (b - 1), n * g * b - g - b + 1) 
-Ptot
+###### Statistical Tests ------
+
+M <- mean(target) # overall mean
+M.treat1 <- tapply(target, treatment1, mean) # mean per treat 1
+M.treat2 <- tapply(target, treatment2, mean) # mean per treat 2
+M.treats <- tapply(target, treatments, mean) # mean per treat 1 x treat 2
+
+
+# Variance Decomposition
+
+SStot <- sum((target - M)^2)
+SSres <- sum(residuals(fit.aov2.int)^2) # Complete Model
+SSres <- sum(residuals(fit.aov2.ad)^2) # Additive Model
+
+
+## Taking SS directly from the Summary
+
+SS.treat1 <- summary.aov(fit.aov2.int)[[1]][1, "Sum Sq"]
+SS.treat2 <- summary.aov(fit.aov2.int)[[1]]["treatment2", "Sum Sq"]  
+SS.treats <- summary.aov(fit.aov2.int)[[1]]["treatment1:treatment2", "Sum Sq"] # Complete Model (only)
+
+
+## Formulas
+
+SS.treats <- SStot - (SS.treat1 + SS.treat2 + SSres) # Complete Model (only)
+SSres <- SStot - (SS.treat1 + SS.treat2 + SS.treats) # Complete Model
+SSres <- SStot - (SS.treat1 + SS.treat2) # Additive Model
+
+
+## Calculating SS Manually [!!! THERE MIGHT BE SOME BUGS !!!]
+
+### Balanced Design
+
+SS.treat1 <- sum(n * b * (M.treat1 - M)^2)
+SS.treat2 <- sum(n * g * (M.treat2 - M)^2) 
+
+SS.treat1 <- 0
+for(i in 1:g)
+{
+  SS.treat1 <- SS.treat1 + n * (M.treat1[i] - M)^2
+}
+
+SS.treat2 <- 0
+for(j in 1:b)
+{
+  SS.treat2 <- SS.treat2 + n * (M.treat2[j] - M)^2
+}
+
+
+SS.treats <- 0
+h <- 1
+for(i in 1:g)
+{
+  for(j in 1:b)
+  {
+    SS.treats <- SS.treats + n * (M.treats[h] - M.treat1[i] - M.treat2[j] + M)^2
+    h <- h + 1
+  }
+}
+
+SSres <- 0
+h <- 1
+l <- 1
+for(i in 1:g)
+{
+  for(j in 1:b)
+  {
+    for(k in 1:n)
+    {
+      SSres <- SSres + sum((target[treatments == treats[h]][k] - M.treats[h])^2)
+      l <- l + 1
+    }
+    h <- h + 1
+  }
+}
+
+
+### Unbalanced Design
+
+SS.treat1 <- 0
+for(i in 1:g)
+{
+  SS.treat1 <- SS.treat1 + table(treatment1)[i] * (M.treat1[i] - M)^2
+}
+
+SS.treat2 <- 0
+for(j in 1:b)
+{
+  SS.treat2 <- SS.treat2 + table(treatment2)[j] * (M.treat2[j] - M)^2
+}
+
+SS.treats <- 0
+h <- 1
+for(i in 1:g)
+{
+  for(j in 1:b)
+  {
+    SS.treats <- SS.treats + table(treatments)[h] * (M.treats[h] - M.treat1[i] - M.treat2[j] + M)^2
+    h <- h + 1
+  }
+}
+
+SSres <- 0
+h <- 1
+l <- 1
+for(i in 1:g)
+{
+  for(j in 1:b)
+  {
+    for(k in 1:table(treatments)[h])
+    {
+      SSres <- SSres + sum((target[treatments == treats[h]][k] - M.treats[h])^2)
+      l <- l + 1
+    }
+    h <- h + 1
+  }
+}
+
+
+# Degrees of Freedom
+
+dofs.res <- fit.aov2.int$df.residual # Complete Model -> g*b * (n - 1)
+dofs.res <- fit.aov2.ad$df.residual # Additive Model -> g*b*n - g - b + 1
+
+dofs.treat1 <- summary.aov(fit.aov2.int)[[1]][1, "Df"] # g - 1
+dofs.treat2 <- summary.aov(fit.aov2.int)[[1]]["treatment2", "Df"] # b - 1
+dofs.treats <- summary.aov(fit.aov2.int)[[1]]["treatment1:treatment2", "Df"] # Complete Model (only) -> (g - 1) * (b - 1)
+
+
+# Tests
+
+## Global test for the significance of the interactions (Complete Model only!)
+
+F.INT <- (SS.treats / dofs.treats) / (SSres / dofs.res)
+P.INT <- 1 - pf(F.INT, dofs.treats, dofs.res) 
+P.INT
+
+## Global test for the significance of the first treatment 
+
+F.T1 <- (SS.treat1 / dofs.treat1) / (SSres / dofs.res)
+P.T1 <- 1 - pf(F.T1, dofs.treat1, dofs.res) 
+P.T1
+
+## Global test for the significance of the second treatment 
+
+F.T2 <- (SS.treat2 / dofs.treat2) / (SSres / dofs.res)
+P.T2 <- 1 - pf(F.T2, dofs.treat2, dofs.res) 
+P.T2
+
+## Note: These aren't the only tests we can do!
+## Global test for the joint significance of the two treatments 
+
+F.TOT <- ((SS.treat1 + SS.treat2) / (dofs.treat1 + dofs.treat2)) / (SSres / dofs.res)
+P.TOT <- 1 - pf(F.TOT, dofs.treat1 + dofs.treat2, dofs.res) 
+P.TOT
 
 
 ##### Confidence Intervals -----
@@ -1634,27 +1790,31 @@ Ptot
 alpha <- 0.10
 k <- (g*b)*(g*b-1)/2 # Complete Model
 k <- (g*b)*(g*b-1)/2 - (g+b)*(g*b-g-b+1)/2 # Additive Model
-dofs <- g*b*(n - 1) # Complete Model
-dofs <- g*b*n - g-b+1 # Additive Model
+dofs <- fit.aov2.int$df.residual # Complete Model: g*b*(n - 1)
+dofs <- fit.aov2.ad$df.residual # Additive Model: g*b*n - g-b+1
 
 qT <- qt(1 - alpha/(2*k), dofs)
 
 Mediag <- tapply(target, treatments, mean)
-SSres <- sum(residuals(fit) ^ 2)
+SSres <- sum(residuals(fit.aov2.int)^2) # Complete Model
+SSres <- sum(residuals(fit.aov2.ad)^2) # Additive Model
 S <- SSres / dofs
+
+ng <- table(treatments)
 
 CI.range <- NULL
 for(i in 1:((g*b)-1)) 
 {
   for(j in (i+1):(g*b)) 
   {
-    print(paste(treats[i], "-", treats[j]))        
-    print(as.numeric(c(Mediag[i] - Mediag[j] - qT * sqrt(S * (1/n + 1/n)),
-                       Mediag[i] - Mediag[j] + qT * sqrt(S * (1/n + 1/n)))))
-    CI.range <- rbind(CI.range, as.numeric(c(Mediag[i]-Mediag[j] - qT * sqrt(S * (1/n + 1/n)),
-                                             Mediag[i]-Mediag[j] + qT * sqrt(S * (1/n + 1/n)))))
+    inf <- Mediag[i] - Mediag[j] - qT * sqrt(S * (1/ng[i] + 1/ng[j]))
+    sup <- Mediag[i] - Mediag[j] + qT * sqrt(S * (1/ng[i] + 1/ng[j]))
+    interval_i <- cbind(inf, sup)
+    rownames(interval_i) <- paste(treats[i], "-", treats[j])
+    CI.range <- rbind(CI.range, interval_i)
   }
 }
+CI.range
 
 h <- 1
 plot(c(1, (g*b)*(g*b-1)/2), range(CI.range), pch = '', xlab = 'Pairs Treat', ylab = 'Conf. Int. tau Target')
@@ -1672,27 +1832,50 @@ for(i in 1:((g*b)-1))
 abline(h = 0)
 
 
-##### Reduced additive model (ANOVA one-way, b=2) -----
+##### Reduced additive model (ANOVA one-way) -----
 
 # X.jk = mu + beta.j + eps.jk; eps.jk~N(0,sigma^2), 
 #     j=1,2 (effect treatment2)
 fit.aov1 <- aov(target ~ treatment2)
 summary.aov(fit.aov1)
 
-SSres <- sum(residuals(fit.aov1)^2)
+# Interval for the differences (reduced additive model)
 
-# Interval at 90% for the differences (reduced additive model)
-# [b=2, thus one interval only]
-IC <- c(diff(M.treat2) - qt(0.95, (n*g-1)*b) * sqrt(SSres/((n*g-1)*b) *(1/(n*g) + 1/(n*g))), 
-        diff(M.treat2) + qt(0.95, (n*g-1)*b) * sqrt(SSres/((n*g-1)*b) *(1/(n*g) + 1/(n*g))))
-names(IC) <- c('Inf', 'Sup')
-IC # IC for mu(j=1)-mu(j=2)
+SSres <- sum(residuals(fit.aov1)^2)
+dofs <- fit.aov1$df.residual
+dofs <- (n*g-1)*b # if fitted ANOVA against treatment2
+dofs <- (n*b-1)*g # if fitted ANOVA against treatment1
+
+k <- b * (b - 1) / 2 # Change "b" with "g" if fitted ANOVA against treatment1 
+alpha <- 0.05
+ng <- table(treatment2) # Change "2" with "1" if fitted ANOVA against treatment1 
+
+Mediag <- tapply(target, treatment2, mean) # Change "2" with "1" if fitted ANOVA against treatment1 
+S <- SSres / dofs
+
+qT <- qt(1 - alpha/(2*k), dofs)
+
+treat <- levels(treatment2) # Change "2" with "1" if fitted ANOVA against treatment1 
+
+CI.range <- NULL
+for(i in 1:(b-1)) # Change "b" with "g" if fitted ANOVA against treatment1 
+{
+  for(j in (i+1):b) # Change "b" with "g" if fitted ANOVA against treatment1 
+  {
+    inf <- Mediag[i] - Mediag[j] - qT * sqrt(S * (1/ng[i] + 1/ng[j]))
+    sup <- Mediag[i] - Mediag[j] + qT * sqrt(S * (1/ng[i] + 1/ng[j]))
+    interval_i <- cbind(inf, sup)
+    rownames(interval_i) <- paste(treat[i], "-", treat[j])
+    CI.range <- rbind(CI.range, interval_i)
+  }
+}
+CI.range
 
 
 #### Two-ways MANOVA ----
 
-treatment1 <- factor(data$treatment1, labels = c('F', 'T')) 
-treatment2 <- factor(data$treatment2, labels = c('F', 'T')) 
+treatment1 <- factor(data$treatment1, labels = c('LvA', 'LvB', 'LvC')) 
+treatment2 <- factor(data$treatment2, labels = c('LvX', 'LvY', 'LvZ')) 
 
 treatments <- factor(paste(treatment1, treatment2, sep=''))
 treatments
@@ -2023,7 +2206,7 @@ print(paste("APER:", APER))
 
 errors <- (lda.pred$class != groups)
 
-APER   <- sum(errors)/length(species.name)
+APER   <- sum(errors) / length(groups)
 APER
 
 # -
@@ -2091,6 +2274,14 @@ cur_strategy_cost <- (FP / (TN + FP)) * total * p.neg * c.pn + (FN / (TP + FN)) 
 rbind("Savings", prev_strategy_cost - cur_strategy_cost)
 
 
+##### Prediction -----
+
+new.datum <- c(-159.5, 21.9)
+
+lda.pred <- predict(lda, new.datum)
+lda.pred$class
+
+
 #### k-Nearest Neighbors (kNN) ----
 
 ##### Univariate Case -----
@@ -2143,6 +2334,31 @@ knn <- knn(train = target, test = xy, cl = groups, k = k)
 z <- as.numeric(knn)
 
 contour(x, y, matrix(z, 200), levels = c(1.5), drawlabels = F, add = T)
+
+
+##### Cross-Validation -----
+
+set.seed(9)
+AERkCV <- NULL
+for(k in 5:20)
+{
+  knnCV <- knn.cv(train = target, cl = groups, k = k)
+  
+  errorskCV <- (knnCV != groups)
+  AERkCV[k-(5-1)] <- sum(errorskCV) / length(groups)
+}
+AERkCV
+
+min(AERkCV)
+which(AERkCV == min(AERkCV)) # -> k = result + (5-1)
+
+
+##### Prediction -----
+
+new.datum <- c(-159.5, 21.9)
+
+knn.pred <- knn(train = target, test = new.datum, cl = groups, k = k)
+knn.pred
 
 
 #### Support Vector Machines (SVM) ----
@@ -2552,8 +2768,18 @@ hatvalues(m0) # h_ii (or sometimes called "leverage")
 rstandard(m0) # standardized residuals: eps_j / sqrt(s^2*(1-h_ii))
 
 sum((m0$residuals)^2)/m0$df  # s^2 estimate of sigma^2
+summary(m0)$sigma^2 # equivalent
 
 AIC(m0) # a metric that is used to quantify the fit of models (the lower the better)
+
+summary(m0)$r.squared # R^2
+summary(m0)$adj.r.squared
+
+SStot <- sum((data$target - mean(data$target))^2)
+SSres <- sum((m0$residuals)^2)
+
+SSres / SStot # percentage of unexplained variability
+1 - summary(m0)$r.squared # equivalent
 
 
 #### Inference on the Parameters ----
@@ -2655,6 +2881,11 @@ Conf
 # Pred. int. for a new obs
 Pred <- predict(m0, new.datum, interval = 'prediction', level = 1-0.05) 
 Pred
+
+Pred[1, "fit"]
+
+range(data[which(data$dummy == "handmade"), ]$reg1)
+# Are we far from the data baricenter?
 
 
 #### Diagnostic ----
