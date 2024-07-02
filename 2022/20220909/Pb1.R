@@ -87,8 +87,42 @@ summary.aov(fit.aov2.int)
 
 # b) ----------------------------------------------------------------------
 
+SStot <- sum((target - M)^2)
+SSres <- sum(residuals(fit.aov2.int)^2) # Complete Model
+SS.treat1 <- summary.aov(fit.aov2.int)[[1]][1, "Sum Sq"]
+SS.treat2 <- summary.aov(fit.aov2.int)[[1]]["treatment2", "Sum Sq"]  
+SS.treats <- summary.aov(fit.aov2.int)[[1]]["treatment1:treatment2", "Sum Sq"] # Complete Model (only)
+
+dofs.res <- fit.aov2.int$df.residual # Complete Model -> g*b * (n - 1)
+dofs.treat1 <- summary.aov(fit.aov2.int)[[1]][1, "Df"] # g - 1
+dofs.treat2 <- summary.aov(fit.aov2.int)[[1]]["treatment2", "Df"] # b - 1
+dofs.treats <- summary.aov(fit.aov2.int)[[1]]["treatment1:treatment2", "Df"] # Complete Model (only) -> (g - 1) * (b - 1)
+
+## Global test for the significance of the interactions (Complete Model only!)
+
+F.INT <- (SS.treats / dofs.treats) / (SSres / dofs.res)
+P.INT <- 1 - pf(F.INT, dofs.treats, dofs.res) 
+P.INT
+
+
 fit.aov2.ad <- aov(target ~ treatment1 + treatment2)
 summary.aov(fit.aov2.ad)
+
+SSres <- sum(residuals(fit.aov2.ad)^2) # Additive Model
+dofs.res <- fit.aov2.ad$df.residual # Additive Model -> g*b*n - g - b + 1
+
+## Global test for the significance of the first treatment 
+
+F.T1 <- (SS.treat1 / dofs.treat1) / (SSres / dofs.res)
+P.T1 <- 1 - pf(F.T1, dofs.treat1, dofs.res) 
+P.T1
+
+## Global test for the significance of the second treatment 
+
+F.T2 <- (SS.treat2 / dofs.treat2) / (SSres / dofs.res)
+P.T2 <- 1 - pf(F.T2, dofs.treat2, dofs.res) 
+P.T2
+
 
 fit.aov1 <- aov(target ~ treatment1)
 summary.aov(fit.aov1)
