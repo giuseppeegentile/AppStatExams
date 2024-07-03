@@ -114,6 +114,8 @@ dev.off()
 graphics.off()
 par(mfrow=c(1,1))
 
+cat("\014") # clear console
+
 
 #### Multivariate Data ----
 
@@ -692,10 +694,12 @@ col.lab <- ifelse(data.label[] %in% c("feature2_name", "feature3_name"),
                   'red')
 
 par(mfrow = c(1, 1))
-plot(scores.data[, 1:2], col = col.lab, pch = 19, xlim = c(-5, 5), ylim = c(-5, 5))
-abline(h = -5, v = -5, col = 1)
-points(scores.data[, 1], rep(-5, n), col = col.lab, pch = 19)
-points(rep(-5, n), scores.data[, 2], col = col.lab, pch = 19)
+plot(scores.data[, 1:2], col = col.lab, pch = 19, 
+     xlim = c(min(scores.data[, 1]) - 1, max(scores.data[, 1]) + 1), 
+     ylim = c(min(scores.data[, 2]) - 1, max(scores.data[, 2]) + 1))
+abline(h = min(scores.data[, 2]) - 1, v = min(scores.data[, 1]) - 1, col = 1)
+points(scores.data[, 1], rep(min(scores.data[, 2]) - 1, n), col = col.lab, pch = 19)
+points(rep(min(scores.data[, 1]) - 1, n), scores.data[, 2], col = col.lab, pch = 19)
 abline(h = 0, v = 0, lty = 2, col = 'grey')
 legend('topright', levels(factor(data.label[])), fill = c('red', 'green', 'blue'), bty = 'n')
 
@@ -789,7 +793,7 @@ points(new.datum.std.score[1], new.datum.std.score[2], col = 'red', pch = 19)
 #### Paired Data ----
 
 D <- data.frame(DF1 = data$feature1_obs1 - data$feature1_obs2,
-                DF2 = data$feature2_obs1 - data$feature2_obs2) 
+                DF2 = data$feature2_obs1 - data$feature2_obs2) # may be useful to substitute DF1 w/ feature1's name
 D
 
 mvn(data = D)$multivariateNormality
@@ -820,67 +824,88 @@ P
 
 ##### Confidence Intervals -----
 
-T2.I.DF1 <- c(D.mean[1] - sqrt(cfr.fisher * D.cov[1, 1] / n),
-              D.mean[1],
-              D.mean[1] + sqrt(cfr.fisher * D.cov[1, 1] / n))
-
-T2.I.DF2 <- c(D.mean[2] - sqrt(cfr.fisher * D.cov[2, 2] / n),
-              D.mean[2],
-              D.mean[2] + sqrt(cfr.fisher * D.cov[2, 2] / n))
-
-T2.I <- rbind(T2.I.DF1, T2.I.DF2)
+T2.I <- NULL
+for(i in 1:p)
+{
+  T2.I.DFi <- cbind(D.mean[i] - sqrt(cfr.fisher * D.cov[i, i] / n),
+                    D.mean[i],
+                    D.mean[i] + sqrt(cfr.fisher * D.cov[i, i] / n))
+  T2.I <- rbind(T2.I, T2.I.DFi)
+}
 dimnames(T2.I)[[2]] <- c('inf', 'center', 'sup')
 T2.I
 
-BF.I.DF1 <- c(D.mean[1] - cfr.t * sqrt(D.cov[1, 1] / n),
-              D.mean[1],
-              D.mean[1] + cfr.t * sqrt(D.cov[1, 1] / n))
+# or
 
-BF.I.DF2 <- c(D.mean[2] - cfr.t * sqrt(D.cov[2, 2] / n),
-              D.mean[2],
-              D.mean[2] + cfr.t * sqrt(D.cov[2, 2] / n))
+T2.I <- cbind(D.mean - sqrt(cfr.fisher * diag(D.cov)/n),
+              D.mean,
+              D.mean + sqrt(cfr.fisher * diag(D.cov)/n))
+dimnames(T2.I)[[2]] <- c('inf', 'center', 'sup')
+T2.I
 
-BF.I <- rbind(BF.I.DF1, BF.I.DF2)
+
+k <- p
+cfr.t <- qt(1 - alpha/(2*k), n-1)
+
+BF.I <- NULL
+for(i in 1:p)
+{
+  BF.I.DFi <- cbind(D.mean[i] - cfr.t * sqrt(D.cov[i, i] / n),
+                    D.mean[i],
+                    D.mean[i] + cfr.t * sqrt(D.cov[i, i] / n))
+  BF.I <- rbind(BF.I, BF.I.DFi)
+}
+dimnames(BF.I)[[2]] <- c('inf', 'center', 'sup')
+BF.I
+
+# or
+
+BF.I <- cbind(D.mean - cfr.t * sqrt(diag(D.cov)/n),
+              D.mean,
+              D.mean + cfr.t * sqrt(diag(D.cov)/n))
 dimnames(BF.I)[[2]] <- c('inf', 'center', 'sup')
 BF.I
 
 
-##### Plot Intervals -----
+##### Confidence Region -----
 
-plot(D, asp = 1, pch = 1, main = 'Dataset of the Differences')
+plot(D, asp = 1, pch = 1, 
+     xlim = c(min(D[, 1]) - 2, max(D[, 1]) + 2),
+     main = 'Dataset of the Differences')
+
+abline(h = delta.0[1], v = delta.0[2], col = 'grey35', lty = 2)
+points(delta.0[1], delta.0[2], col = 'red', pch = 9, cex = 1)
+
 ellipse(center = D.mean, shape = D.cov/n, radius = sqrt(cfr.fisher), lwd = 2, col = 'grey')
-abline(v = T2.I[1,1], col = 'red', lwd = 1, lty = 2)
-abline(v = T2.I[1,3], col = 'red', lwd = 1, lty = 2)
-abline(h = T2.I[2,1], col = 'red', lwd = 1, lty = 2)
-abline(h = T2.I[2,3], col  ='red', lwd = 1, lty = 2)
 
-points(delta.0[1], delta.0[2], pch = 16, col = 'grey35', cex = 1.5)
-abline(h = delta.0[1], v = delta.0[2], col = 'grey35')
+abline(v = T2.I[1, 1], col = 'orange', lwd = 1, lty = 2)
+abline(v = T2.I[1, 3], col = 'orange', lwd = 1, lty = 2)
+abline(h = T2.I[2, 1], col = 'orange', lwd = 1, lty = 2)
+abline(h = T2.I[2, 3], col = 'orange', lwd = 1, lty = 2)
 
-segments(T2.I.DF1[1], 0, T2.I.DF1[3], 0, lty = 1, lwd = 2, col = 'red')
-segments(0, T2.I.DF2[1], 0, T2.I.DF2[3], lty = 1, lwd = 2, col = 'red')
+segments(T2.I[1, 1], 0, T2.I[1, 3], 0, lty = 1, lwd = 2, col = 'orange')
+segments(0, T2.I[2, 1], 0, T2.I[2, 3], lty = 1, lwd = 2, col = 'orange')
 
-abline(v = BF.I[1,1], col = 'orange', lwd = 1, lty = 2)
-abline(v = BF.I[1,3], col = 'orange', lwd = 1, lty = 2)
-abline(h = BF.I[2,1], col = 'orange', lwd = 1, lty = 2)
-abline(h = BF.I[2,3], col  ='orange', lwd = 1, lty = 2)
+abline(v = BF.I[1, 1], col = 'purple', lwd = 1, lty = 2)
+abline(v = BF.I[1, 3], col = 'purple', lwd = 1, lty = 2)
+abline(h = BF.I[2, 1], col = 'purple', lwd = 1, lty = 2)
+abline(h = BF.I[2, 3], col = 'purple', lwd = 1, lty = 2)
 
-points(delta.0[1], delta.0[2], pch = 16, col = 'grey35', cex = 1.5)
-abline(h = delta.0[1], v = delta.0[2], col = 'grey35')
+segments(BF.I[1, 1], 0, BF.I[1, 3], 0, lty = 1, lwd = 2, col = 'purple')
+segments(0, BF.I[2, 1], 0, BF.I[2, 3], lty = 1, lwd = 2, col = 'purple')
 
-segments(BF.I.DF1[1], 0, BF.I.DF1[3], 0, lty = 1, lwd = 2, col = 'orange')
-segments(0, BF.I.DF2[1], 0, BF.I.DF2[3], lty = 1, lwd = 2, col = 'orange')
+legend('topright', c('Bonf. IC', 'Sim-T2 IC'), col = c('purple', 'orange'), lty = 1, lwd = 2)
 
 worst <- D.invcov %*% (D.mean - delta.0)
 worst <- worst / sqrt(sum(worst ^ 2))
 worst
 
-CI.worst <- c(D.mean %*% worst - sqrt(cfr.fisher*(t(worst) %*% D.cov %*% worst) / n),
+CI.worst <- c(D.mean %*% worst - sqrt(cfr.fisher * (t(worst) %*% D.cov %*% worst) / n),
               D.mean %*% worst,
-              D.mean %*% worst + sqrt(cfr.fisher*(t(worst) %*% D.cov %*% worst) / n))
+              D.mean %*% worst + sqrt(cfr.fisher * (t(worst) %*% D.cov %*% worst) / n))
 CI.worst
 delta.0 %*% worst
-(IC.worst[1] < delta.0 %*% worst) & (delta.0 %*% worst < IC.worst[3])   
+(CI.worst[1] < delta.0 %*% worst) & (delta.0 %*% worst < CI.worst[3])   
 
 x.min <- CI.worst[1] * worst # (x,y) coords of the lower bound of the interval
 x.max <- CI.worst[3] * worst # (x,y) coords of the upper bound of the interval
@@ -912,6 +937,8 @@ C <- matrix(c(-1, 1, 0, 0,
               -1, 0, 0, 1), q-1, q, byrow = T)
 C
 
+mvn(t(C %*% t(data)))$multivariateNormality$'p value'
+
 alpha <- .05
 delta.0 <- c(0, 0, 0)
 
@@ -938,6 +965,7 @@ P
 T2.I <- cbind(Md - sqrt(cfr.fisher * diag(Sd)/n),
               Md,
               Md + sqrt(cfr.fisher * diag(Sd)/n))
+dimnames(T2.I)[[2]] <- c('inf', 'center', 'sup')
 T2.I
 
 # Bonferroni intervals
@@ -948,6 +976,7 @@ cfr.t <- qt(1 - alpha/(2*k), n-1)
 BF.I <- cbind(Md - cfr.t * sqrt(diag(Sd)/n),
               Md,
               Md + cfr.t * sqrt(diag(Sd)/n))
+dimnames(BF.I)[[2]] <- c('inf', 'center', 'sup')
 BF.I
 
 
@@ -956,15 +985,72 @@ BF.I
 matplot(t(matrix(1:(q-1), 3, 3)), t(BF.I), type = 'b', pch = '', xlim = c(0, 4), xlab = '', ylab = '', main = 'Confidence Intervals')
 
 segments(matrix(1:(q-1), 3, 1), BF.I[, 1], matrix(1:3, 3, 1), BF.I[, 3],
-         col = 'orange', lwd = 2)
-points(1:(q-1), BF.I[, 2], col = 'orange', pch = 16)
+         col = 'purple', lwd = 2)
+points(1:(q-1), BF.I[, 2], col = 'purple', pch = 16)
 
 points(1:(q-1)+.05, delta.0, col='black', pch = 16)
 
-segments(matrix(1:(q-1)+.1, 3, 1), T2.I[, 1], matrix(1:(q-1)+.1, 3, 1), T2.I[, 3], col = 'blue', lwd = 2)
-points(1:(q-1)+.1, T2.I[, 2], col = 'blue', pch = 16)
+segments(matrix(1:(q-1)+.1, 3, 1), T2.I[, 1], matrix(1:(q-1)+.1, 3, 1), T2.I[, 3], col = 'orange', lwd = 2)
+points(1:(q-1)+.1, T2.I[, 2], col = 'orange', pch = 16)
 
-legend('topright', c('Bonf. IC', 'Sim-T2 IC'), col = c('orange', 'blue'), lty = 1, lwd = 2)
+abline(h = 0, col = 'grey', lty = 2)
+
+legend('topright', c('Bonf. IC', 'Sim-T2 IC'), col = c('purple', 'orange'), lty = 1, lwd = 2)
+
+
+##### Confidence Region -----
+
+diff <- cbind(data[, 1] - data[, 2], data[, 1] - data[, 3]) # choose differences first
+
+plot(diff[, 1], diff[, 2], asp = 1, pch = 1, 
+     xlim = c(min(diff[, 1]) - 2, max(diff[, 1]) + 2),
+     main = 'Dataset of the Differences t1-t3 vs t1-t2')
+
+abline(h = delta.0[1], v = delta.0[2], col = 'grey35', lty = 2)
+points(delta.0[1], delta.0[2], col = 'red', pch = 9, cex = 1)
+
+ellipse(center = c(Md), shape = Sd/n, radius = sqrt(cfr.fisher), lwd = 2, col = 'grey')
+
+abline(v = T2.I[1, 1], col = 'orange', lwd = 1, lty = 2)
+abline(v = T2.I[1, 3], col = 'orange', lwd = 1, lty = 2)
+abline(h = T2.I[2, 1], col = 'orange', lwd = 1, lty = 2)
+abline(h = T2.I[2, 3], col = 'orange', lwd = 1, lty = 2)
+
+segments(T2.I[1, 1], 0, T2.I[1, 3], 0, lty = 1, lwd = 2, col = 'orange')
+segments(0, T2.I[2, 1], 0, T2.I[2, 3], lty = 1, lwd = 2, col = 'orange')
+
+abline(v = BF.I[1, 1], col = 'purple', lwd = 1, lty = 2)
+abline(v = BF.I[1, 3], col = 'purple', lwd = 1, lty = 2)
+abline(h = BF.I[2, 1], col = 'purple', lwd = 1, lty = 2)
+abline(h = BF.I[2, 3], col = 'purple', lwd = 1, lty = 2)
+
+segments(BF.I[1, 1], 0, BF.I[1, 3], 0, lty = 1, lwd = 2, col = 'purple')
+segments(0, BF.I[2, 1], 0, BF.I[2, 3], lty = 1, lwd = 2, col = 'purple')
+
+legend('topright', c('Bonf. IC', 'Sim-T2 IC'), col = c('purple', 'orange'), lty = 1, lwd = 2)
+
+worst <- Sdinv %*% (Md - delta.0)
+worst <- worst / sqrt(sum(worst ^ 2))
+worst
+
+CI.worst <- c(t(Md) %*% worst - sqrt(cfr.fisher * (t(worst) %*% Sd %*% worst) / n),
+              t(Md) %*% worst,
+              t(Md) %*% worst + sqrt(cfr.fisher * (t(worst) %*% Sd %*% worst) / n))
+CI.worst
+delta.0 %*% worst
+(CI.worst[1] < delta.0 %*% worst) & (delta.0 %*% worst < CI.worst[3])   
+
+x.min <- CI.worst[1] * worst # (x,y) coords of the lower bound of the interval
+x.max <- CI.worst[3] * worst # (x,y) coords of the upper bound of the interval
+m1.ort <- - worst[1] / worst[2] # Slope of the line orthogonal to worst
+q.min.ort <- x.min[2] - m1.ort * x.min[1] # Intercept of line of slope m1.ort passing by x.min
+q.max.ort <- x.max[2] - m1.ort * x.max[1] # Intercept of line of slope m1.ort passing by x.max
+abline(q.min.ort, m1.ort, col = 'forestgreen', lty = 2, lwd = 1)
+abline(q.max.ort, m1.ort, col = 'forestgreen', lty = 2, lwd = 1)
+
+m1 = worst[2] / worst[1] # worst direction
+abline(0, m1, col='grey35') # Intercept 0 because the line has to pass by delta.0 which is (0, 0)
+segments(x.min[1], x.min[2], x.max[1], x.max[2], lty = 1, lwd = 2, col = 'forestgreen')
 
 
 ##### Equivalent Contrast Matrices -----
@@ -1012,11 +1098,35 @@ p  <- dim(data1)[2]
 mvn(data1)$multivariateNormality
 mvn(data2)$multivariateNormality
 
+list(S1 = cov(data1), S2 = cov(data2))
+abs(cov(data1)/cov(data2))
+
+# Box's M test for homogeneity of covariance matrices
+# Should be done only if n_i > ~20 for all i, p < 5 and g < 5
+# WARNING: Very sensitive to departure from normality and too restrictive for MANOVA
+# especially if we have a high number of samples
+
+target <- rbind(as.matrix(data1), as.matrix(data2))
+groups <- factor(rbind(cbind(rep(1, n1)), cbind(rep(2, n2))))
+
+summary(boxM(target, groups)) #!library(heplots)
+boxM(target, groups)$p.value
+
 data1.mean <- sapply(data1, mean)
 data2.mean <- sapply(data2, mean)
 data1.cov <-  cov(data1)
 data2.cov <-  cov(data2)
 Sp <- ((n1 - 1) * data1.cov + (n2 - 1) * data2.cov) / (n1 + n2 - 2)
+
+plot(data1, asp = 1, pch = 19, col = 'red', 
+     xlim = c(min(min(data1[, 1]), min(data2[, 1])) - 1, max(max(data1[, 1]), max(data2[, 1])) + 1), 
+     ylim = c(min(min(data1[, 2]), min(data2[, 2])) - 1, max(max(data1[, 2]), max(data2[, 2])) + 1))
+for (i in 1:n2)
+{
+  points(data2[i, 1], data2[i, 2], col = 'blue', pch = 19)
+}
+points(data1.mean[1], data1.mean[2], col = 'red', pch = 11, cex = 2)
+points(data2.mean[1], data2.mean[2], col = 'blue', pch = 11, cex = 2)
 
 list(S1 = data1.cov, S2 = data2.cov, Spooled = Sp)
 
@@ -1040,86 +1150,110 @@ P
 
 # Simultaneous T2 intervals
 
-T2.I.F1 <- c(data1.mean[1] - data2.mean[1] - sqrt(cfr.fisher * Sp[1, 1] * (1 / n1 + 1 / n2)),
-             data1.mean[1] - data2.mean[1],
-             data1.mean[1] - data2.mean[1] + sqrt(cfr.fisher * Sp[1, 1] * (1 / n1 + 1 / n2)))
-T2.I.F2 <- c(data1.mean[2] - data2.mean[2] - sqrt(cfr.fisher * Sp[2, 2] * (1 / n1 + 1 / n2)),
-             data1.mean[2] - data2.mean[2],
-             data1.mean[2] - data2.mean[2] + sqrt(cfr.fisher * Sp[2, 2] * (1 / n1 + 1 / n2)))
-
-T2.I <- rbind(T2.I.F1, T2.I.F2)
+T2.I <- NULL
+for(i in 1:p)
+{
+  T2.I.Fi <- cbind(data1.mean[i] - data2.mean[i] - sqrt(cfr.fisher * Sp[i, i] * (1 / n1 + 1 / n2)),
+                   data1.mean[i] - data2.mean[i],
+                   data1.mean[i] - data2.mean[i] + sqrt(cfr.fisher * Sp[i, i] * (1 / n1 + 1 / n2)))
+  T2.I <- rbind(T2.I, T2.I.Fi)
+}
 dimnames(T2.I)[[2]] <- c('inf', 'center', 'sup')
-dimnames(T2.I)[[1]] <- colnames(data1)
 T2.I
 
 # or
 
-T2.I <- cbind(inf = data1.mean - data2.mean - sqrt(cfr.fisher * diag(Sp) * (1 / n1 + 1 / n2)),
-              center = data1.mean - data2.mean,
-              sup = data1.mean - data2.mean + sqrt(cfr.fisher * diag(Sp) * (1 / n1 + 1 / n2)))
+T2.I <- cbind(data1.mean - data2.mean - sqrt(cfr.fisher * diag(Sp) * (1 / n1 + 1 / n2)),
+              data1.mean - data2.mean,
+              data1.mean - data2.mean + sqrt(cfr.fisher * diag(Sp) * (1 / n1 + 1 / n2)))
+dimnames(T2.I)[[2]] <- c('inf', 'center', 'sup')
 T2.I
 
 # Bonferroni intervals
 
 k <- p
-cfr.t <- qt(1 - alpha/(2*k), n-1)
+cfr.t <- qt(1 - alpha/(2*k), n1 + n2 - 2)
 
-BF.I.F1 <- c(data1.mean[1] - data2.mean[1] - cfr.t * sqrt(Sp[1, 1] * (1 / n1 + 1 / n2)),
-             data1.mean[1] - data2.mean[1],
-             data1.mean[1] - data2.mean[1] + cfr.t * sqrt(Sp[1, 1] * (1 / n1 + 1 / n2)))
-BF.I.F2 <- c(data1.mean[2] - data2.mean[2] - cfr.t * sqrt(Sp[2, 2] * (1 / n1 + 1 / n2)),
-             data1.mean[2] - data2.mean[2],
-             data1.mean[2] - data2.mean[2] + cfr.t * sqrt(Sp[2, 2] * (1 / n1 + 1 / n2)))
-
-BF.I <- rbind(BF.I.F1, BF.I.F2)
+BF.I <- NULL
+for(i in 1:p)
+{
+  BF.I.Fi <- cbind(data1.mean[i] - data2.mean[i] - cfr.t * sqrt(Sp[i, i] * (1 / n1 + 1 / n2)),
+                   data1.mean[i] - data2.mean[i],
+                   data1.mean[i] - data2.mean[i] + cfr.t * sqrt(Sp[i, i] * (1 / n1 + 1 / n2)))
+  BF.I <- rbind(BF.I, BF.I.Fi)
+}
 dimnames(BF.I)[[2]] <- c('inf', 'center', 'sup')
-dimnames(BF.I)[[1]] <- colnames(data1)
 BF.I
 
 # or
 
-BF.I <- cbind(inf = data1.mean - data2.mean - cfr.t * sqrt(diag(Sp) * (1 / n1 + 1 / n2)),
-              center = data1.mean - data2.mean,
-              sup = data1.mean - data2.mean + cfr.t * sqrt(diag(Sp) * (1 / n1 + 1 / n2)))
+BF.I <- cbind(data1.mean - data2.mean - cfr.t * sqrt(diag(Sp) * (1 / n1 + 1 / n2)),
+              data1.mean - data2.mean,
+              data1.mean - data2.mean + cfr.t * sqrt(diag(Sp) * (1 / n1 + 1 / n2)))
+dimnames(BF.I)[[2]] <- c('inf', 'center', 'sup')
 BF.I
 
 
 ##### Confidence Region -----
 
-plot(data1, asp = 1, pch = 19, col = 'red', xlim = c(4, 10), ylim = c(4,10))
-for (i in 1:n1)
-{
-  points(data2[i, 1], data2[i, 2], col = 'blue', pch = 19)
-}
-points(data1.mean[1], data1.mean[2], col = 'red', pch = 11, cex = 2)
-points(data2.mean[1], data2.mean[2], col = 'blue', pch = 11, cex = 2)
+plot(data1.mean[1] - data2.mean[1], data1.mean[2] - data2.mean[2], asp = 1, pch = 19, 
+     xlim = c(data1.mean[1] - data2.mean[1] - 2, data1.mean[1] - data2.mean[1] + 2))
 
-plot(data1.mean[1] - data2.mean[1], data1.mean[2] - data2.mean[2], asp = 1, pch = 19, xlim = c(-1, 3))
-ellipse(center = (data1.mean - data2.mean), shape=Sp*(n1+n2)/(n1*n2), radius = sqrt(cfr.fisher), lwd = 2, col = 'grey', center.cex = 1.25)
+abline(h = delta.0[1], v = delta.0[2], col = 'grey35', lty = 2)
 points(delta.0[1], delta.0[2], col = 'red', pch = 9, cex = 1)
 
-abline(v = BF.I[1,1], col = 'blue', lwd = 1, lty = 2)
-abline(v = BF.I[1,3], col = 'blue', lwd = 1, lty = 2)
-abline(h = BF.I[2,1], col = 'blue', lwd = 1, lty = 2)
-abline(h = BF.I[2,3], col = 'blue', lwd = 1, lty = 2)
-segments(BF.I.F1[1], BF.I.F2[1], BF.I.F1[3], BF.I.F2[1], lty = 1, lwd = 2, col = 'blue')
-segments(BF.I.F1[1], BF.I.F2[1], BF.I.F1[1], BF.I.F2[3], lty = 1, lwd = 2, col = 'blue')
+ellipse(center = (data1.mean - data2.mean), shape = Sp * (n1+n2)/(n1*n2), radius = sqrt(cfr.fisher), lwd = 2, col = 'grey')
 
-abline(v = T2.I[1,1], col = 'purple', lwd = 1, lty = 2)
-abline(v = T2.I[1,3], col = 'purple', lwd = 1, lty = 2)
-abline(h = T2.I[2,1], col = 'purple', lwd = 1, lty = 2)
-abline(h = T2.I[2,3], col = 'purple', lwd = 1, lty = 2)
-segments(T2.I.F1[1], T2.I.F2[1], T2.I.F1[3], T2.I.F2[1], lty = 1, lwd = 2, col = 'purple')
-segments(T2.I.F1[1], T2.I.F2[1], T2.I.F1[1], T2.I.F2[3], lty = 1, lwd = 2, col = 'purple')
+abline(v = T2.I[1, 1], col = 'orange', lwd = 1, lty = 2)
+abline(v = T2.I[1, 3], col = 'orange', lwd = 1, lty = 2)
+abline(h = T2.I[2, 1], col = 'orange', lwd = 1, lty = 2)
+abline(h = T2.I[2, 3], col = 'orange', lwd = 1, lty = 2)
 
-legend('topright', c('Bonf. IC', 'Sim-T2 IC'), col = c('blue', 'purple'), lty = 1, lwd = 2)
+segments(T2.I[1, 1], 0, T2.I[1, 3], 0, lty = 1, lwd = 2, col = 'orange')
+segments(0, T2.I[2, 1], 0, T2.I[2, 3], lty = 1, lwd = 2, col = 'orange')
+
+abline(v = BF.I[1, 1], col = 'purple', lwd = 1, lty = 2)
+abline(v = BF.I[1, 3], col = 'purple', lwd = 1, lty = 2)
+abline(h = BF.I[2, 1], col = 'purple', lwd = 1, lty = 2)
+abline(h = BF.I[2, 3], col = 'purple', lwd = 1, lty = 2)
+
+segments(BF.I[1, 1], 0, BF.I[1, 3], 0, lty = 1, lwd = 2, col = 'purple')
+segments(0, BF.I[2, 1], 0, BF.I[2, 3], lty = 1, lwd = 2, col = 'purple')
+
+legend('topright', c('Bonf. IC', 'Sim-T2 IC'), col = c('purple', 'orange'), lty = 1, lwd = 2)
+
+worst <- Spinv %*% (data1.mean - data2.mean - delta.0)
+worst <- worst / sqrt(sum(worst^2))
+worst
+
+CI.worst <- c((data1.mean - data2.mean) %*% worst - sqrt(cfr.fisher * (t(worst) %*% Sp %*% worst) * (1 / n1 + 1 / n2)),
+              (data1.mean - data2.mean) %*% worst,
+              (data1.mean - data2.mean) %*% worst + sqrt(cfr.fisher * (t(worst) %*% Sp %*% worst) * (1 / n1 + 1 / n2)))
+CI.worst
+delta.0 %*% worst
+(CI.worst[1] < delta.0 %*% worst) & (delta.0 %*% worst < CI.worst[3])   
+
+x.min <- CI.worst[1] * worst # (x,y) coords of the lower bound of the interval
+x.max <- CI.worst[3] * worst # (x,y) coords of the upper bound of the interval
+m1.ort <- - worst[1] / worst[2] # Slope of the line orthogonal to worst
+q.min.ort <- x.min[2] - m1.ort * x.min[1] # Intercept of line of slope m1.ort passing by x.min
+q.max.ort <- x.max[2] - m1.ort * x.max[1] # Intercept of line of slope m1.ort passing by x.max
+abline(q.min.ort, m1.ort, col = 'forestgreen', lty = 2, lwd = 1)
+abline(q.max.ort, m1.ort, col = 'forestgreen', lty = 2, lwd = 1)
+
+m1 = worst[2] / worst[1] # worst direction
+abline(0, m1, col = 'grey35') # Intercept 0 because the line has to pass by delta.0 which is (0, 0)
+segments(x.min[1], x.min[2], x.max[1], x.max[2], lty = 1, lwd = 2, col = 'forestgreen')
 
 
 #### Large Scale Hypothesis Testing ----
 
 allergy <- read.table('hatingalmonds.txt')
 head(allergy)
+# M1 M2 M3 M4 M5 M6 M7
+#  0  0  0  0  1  1  0 -> mutation "i" YES or NO
 dim(allergy)
+# 100 520
 
 noallergy <- read.table('lovingalmonds.txt')
 head(noallergy)
@@ -1366,21 +1500,13 @@ treat <- levels(treatment)
 g <- length(levels(treatment))
 p <- dim(target)[2]
 
-idx <- NULL
-for(i in 1:g)
-{
-  idx <- rbind(idx, which(treatment == treat[i]))
-}
-dimnames(idx)[[1]] <- treat
-idx
-
 
 ##### Data Visualization -----
 
 par(mfrow=c(1,g))
 for(i in 1:g)
 {
-  boxplot(target[idx[i, ], ], main = treat[i], ylim = range(target), col = rainbow(p))
+  boxplot(target[treatment == treat[i], ], main = treat[i], ylim = range(target), col = rainbow(p))
 }
 
 par(mfrow=c(1,p))
@@ -1394,10 +1520,10 @@ par(mfrow=c(1,1))
 
 ##### Verify Assumptions -----
 
-# 1)  normality (multivariate) in each group
+# 1) normality (multivariate) in each group
 Ps <- NULL
 for(i in 1:g) {
-  mvn.test <- mvn(data = target[idx[i, ], ])
+  mvn.test <- mvn(data = target[treatment == treat[i], ])
   Ps <- rbind(Ps, mvn.test$multivariateNormality$`p value`)
 }
 dimnames(Ps)[[1]] <- treat
@@ -1410,7 +1536,7 @@ covs <- list()
 covs[["S"]] <- cov(target)
 for(i in 1:g)
 {
-  cov <- cov(target[idx[i, ],])
+  cov <- cov(target[treatment == treat[i], ])
   covs[[paste("S", i, sep = '')]] <- cov
 }
 covs
@@ -1458,8 +1584,6 @@ summary.aov(fit)
 
 ##### Confidence Intervals -----
 
-fit$df.
-
 alpha <- 0.05
 k <- p * g * (g - 1) / 2
 qT <- qt(1 - alpha/(2 * k), n - g)
@@ -1469,7 +1593,7 @@ m <- sapply(target, mean)
 
 means <- NULL
 for(i in 1:g) {
-  means <- rbind(means, sapply(target[idx[i, ], ], mean)) 
+  means <- rbind(means, sapply(target[treatment == treat[i], ], mean)) 
 }
 dimnames(means)[[1]] <- treat
 means
@@ -1889,14 +2013,6 @@ n <- dim(target)[1]/(g*b) # group sizes
 N <- n*g*b
 treats <- levels(treatments)
 
-idx <- NULL
-for(i in 1:(g*b))
-{
-  idx <- rbind(idx, which(treatments == treats[i]))
-}
-dimnames(idx)[[1]] <- treats
-idx
-
 
 ##### Visualize Data -----
 
@@ -1917,7 +2033,7 @@ par(mfrow=c(1,1))
 # 1)  normality (multivariate) in each group
 Ps <- NULL
 for(i in 1:(g*b)) {
-  mvn.test <- mvn(data = target[idx[i, ], ])
+  mvn.test <- mvn(data = target[treatment == treats[i], ])
   Ps <- rbind(Ps, mvn.test$multivariateNormality$`p value`)
 }
 dimnames(Ps)[[1]] <- treats
@@ -1930,7 +2046,7 @@ covs <- list()
 covs[["S"]] <- cov(target)
 for(i in 1:(g*b))
 {
-  cov <- cov(target[idx[i, ],])
+  cov <- cov(target[treatment == treats[i], ])
   covs[[paste("S", i, sep = '')]] <- cov
 }
 covs
@@ -1984,7 +2100,7 @@ qT <- qt(1 - alpha/(2*k), dofs)
 
 means <- NULL
 for(i in 1:(g*b)) {
-  means <- rbind(means, sapply(target[idx[i, ], ], mean)) 
+  means <- rbind(means, sapply(target[treatment == treats[i], ], mean)) 
 }
 dimnames(means)[[1]] <- treats
 means
@@ -2170,11 +2286,22 @@ Pbart
 summary(boxM(target, groups)) #!library(heplots)
 boxM(target, groups)$p.value
 
-list(SF = cov(target[neg, ]), ST = cov(target[pos, ]))
+list(SN = cov(target[neg, ]), SP = cov(target[pos, ]))
 abs(cov(target[neg, ])/cov(target[pos, ]))
 
 
 ###### Perform Classification ------
+
+c.np <- 100000
+c.pn <- 500
+
+p.pos <- 0.001
+p.neg <- 1-0.001
+prior = c(p.neg, p.pos)
+prior
+
+prior.c <- c(p.neg*c.pn/(c.np*p.pos+c.pn*p.neg), p.pos*c.np/(c.np*p.pos+c.pn*p.neg))
+prior.c
 
 lda <- lda(target, groups, prior = prior.c)
 lda
@@ -2187,6 +2314,8 @@ colMeans(target[neg, ])
 
 Spooled <- 1/(n-2) * ((cov(target[neg, ])) * (table(groups)["N"] - 1) + (cov(target[pos, ])) * (table(groups)["P"] - 1))
 Spooled # for LDA
+
+list(SN = cov(target[neg, ]), SP = cov(target[pos, ])) # for QDA
 
 
 ###### Evaluation ------
@@ -2259,10 +2388,14 @@ contour(x, y, matrix(post2, 200), levels = 0, drawlabels = F, add = T)
 
 ##### Estimates -----
 
+miscCV
+
 TN <- miscCV[1, 1]
 FN <- miscCV[2, 1]
 FP <- miscCV[1, 2]
 TP <- miscCV[2, 2]
+
+rbind("Probability to classify as P", ((FP / (TN + FP)) * p.neg + (TP / (TP + FN)) * p.pos))
 
 total <- 200
 
@@ -2402,11 +2535,13 @@ contour(seq(from = range(dat[, 1])[1], to = range(dat[, 1])[2], length = n.g),
 
 # Prediction for a new observation (command predict())
 
-testdat <- data.frame(x = cbind(6.75, 6) , y = as.factor("N"))
+testdat <- data.frame(x = cbind(6.75, 6) , y = as.factor("N")) # y is usually not specified
 colnames(testdat)[1:2] <- colnames(dat)[1:2]
 
 ypred <- predict(svmfit, testdat)
-table(true.label = testdat$y, assigned.label = ypred)
+ypred
+
+table(true.label = testdat$y, assigned.label = ypred) # if testdat$y is specified
 
 points(testdat[, 1:2], col = c("blue", "red")[as.numeric(testdat$y)], pch = 4, lwd = 2, cex = 1.5)
 
@@ -2417,9 +2552,14 @@ tune.out <- tune(svm, y~., data = dat, kernel = 'linear',
                  ranges = list(cost = c(0.001 , 0.01, 0.1, 1, 5, 10, 100)))
 summary(tune.out)
 
+summary(tune.out)$best.model$cost
+tune.out$best.model$cost
+
 # Extract the best model from the result of tune
 bestmod <- tune.out$best.model
 summary(bestmod)
+
+bestmod$cost
 
 # If the classes are separable, setting a high value for the cost function
 # leads to the maximal margin classifier (i.e., it returns the classification
@@ -2872,7 +3012,7 @@ BF.I
 
 #### Prediction ----
 
-new.datum <- data.frame(reg1 = 1, reg2 = 2, reg3 = 3, dummy = "T")
+new.datum <- data.frame(reg1 = 1, reg2 = 2, reg3 = 3, dummy = as.logical("T"))
 
 # Conf. int. for the mean
 Conf <- predict(m0, new.datum, interval = 'confidence', level = 1-0.05)  
@@ -3006,6 +3146,11 @@ mse.min
 # The discrepancy arises because the mean squared error (MSE) you are 
 # calculating using mean((y - fitted_values)^2) is based on the entire dataset, 
 # while the MSE reported in the cv.glmnet output is obtained through cross-validation
+
+new.datum <- data.frame(reg1 = 1, reg2 = 2, reg3 = 3, dummy = as.logical("T"))
+
+Pred <- predict(fit.best, as.matrix(new.datum), s = bestlam.regularized, type = "response")
+Pred
 
 
 ###---------------------###
@@ -3336,7 +3481,7 @@ PVRE
 
 # Visualization of the random intercepts with their 95% confidence intervals
 
-dotplot(ranef(m1, condVar = T))
+dotplot(ranef(m1, condVar = T)) #!library(lattice)
 
 # Extract fixed+random intercepts
 
