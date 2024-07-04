@@ -45,6 +45,10 @@ summary(lm2)
 # we have the reduced model
 
 # comment: we have a very good Adjusted R squared, and the assumptions are met.
+# however it may be very high, there is overfitting risk.
+AIC(lm2)
+BIC(lm2)
+# AIC and BIC very high -> bad sign
 par(mfrow=c(2,2))
 plot(lm2)
 
