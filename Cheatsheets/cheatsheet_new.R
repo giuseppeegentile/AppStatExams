@@ -426,10 +426,6 @@ T2 < cfr.fisher
 P <- 1 - pf(T2 * (n - p) / ((n - 1) * p), p, n - p)
 P
 
-plot(data, asp = 1)
-ellipse(M, S/n, sqrt(cfr.fisher), col = 'red', lty = 2, lwd = 2, center.cex = 1)
-points(mu0[1], mu0[2], pch = 16, col ='blue', cex = 1.5)
-
 
 ###### Inference Relying on Asymptotics ------
 
@@ -446,9 +442,10 @@ PA
 
 ###### Simultaneous T2 Confidence Intervals -------
 
-T2.I <- cbind(inf = M - sqrt(cfr.fisher * diag(S)/n), 
-              center = M, 
-              sup = M + sqrt(cfr.fisher * diag(S)/n))
+T2.I <- cbind(M - sqrt(cfr.fisher * diag(S)/n), 
+              M, 
+              M + sqrt(cfr.fisher * diag(S)/n))
+dimnames(T2.I)[[2]] <- c('inf', 'center', 'sup')
 T2.I
 
 # or
@@ -467,13 +464,13 @@ dimnames(T2.I)[[1]] <- c(dimnames(data)[[2]][1], dimnames(data)[[2]][2])
 
 T2.I
 
-rect(T2.I[1,1], T2.I[2,1], T2.I[1,3], T2.I[2,3], border = 'red', lwd = 2)
+rect(T2.I[1,1], T2.I[2,1], T2.I[1,3], T2.I[2,3], border = 'orange', lwd = 2)
 
 matplot(1:p, 1:p, pch = '', ylim = range(data), xlab = 'Variables', ylab = 'T2 for a component', 
         main =' Simultaneous T2 conf. int. for the components')
 for(i in 1:p) segments(i, T2.I[i, 1], i, T2.I[i, 3], lwd = 3, col = i)
 points(1:p, T2.I[, 2], pch = 16, col = 1:p)
-points(1:p, mu0, lwd = 3, col = 'orange')
+points(1:p, mu0, lwd = 3, col = 'red')
 
 
 ###### Bonferroni Confidence Intervals -------
@@ -481,9 +478,10 @@ points(1:p, mu0, lwd = 3, col = 'orange')
 k <- p 
 cfr.t <- qt(1 - alpha/(2*k), n-1)
 
-BF.I <- cbind(inf = M - cfr.t * sqrt(diag(S)/n),
-              center = M, 
-              sup = M + cfr.t * sqrt(diag(S)/n))
+BF.I <- cbind(M - cfr.t * sqrt(diag(S)/n),
+              M, 
+              M + cfr.t * sqrt(diag(S)/n))
+dimnames(BF.I)[[2]] <- c('inf', 'center', 'sup')
 BF.I
 
 # or
@@ -502,48 +500,50 @@ dimnames(BF.I)[[1]] <- c(dimnames(data)[[2]][1], dimnames(data)[[2]][2])
 
 BF.I
 
-rect(BF.I[1,1], BF.I[2,1], BF.I[1,3], BF.I[2,3], border = 'orange', lwd = 2)
+rect(BF.I[1,1], BF.I[2,1], BF.I[1,3], BF.I[2,3], border = 'purple', lwd = 2)
 
 matplot(1:p, 1:p, pch = '', ylim = range(data), xlab = 'Variables', ylab = 'Bonferroni for a component', 
         main =' Bonferroni conf. int. for the components')
 for(i in 1:p) segments(i, BF.I[i, 1], i, BF.I[i, 3], lwd = 3, col = i)
 points(1:p, BF.I[, 2], pch = 16, col = 1:p)
-points(1:p, mu0, lwd = 3, col = 'orange')
+points(1:p, mu0, lwd = 3, col = 'red')
 
 
-##### Project Confidence Region ------
+##### Confidence Region ------
 
 ###### Along Cartesian Axes ------
 
-plot(data, asp = 1, pch = 1)
-ellipse(center = M, shape = S/n, radius = sqrt(cfr.fisher), lwd = 2, col = 'blue')
-abline(v = T2.I[1,1], col = 'red', lwd = 1, lty = 2)
-abline(v = T2.I[1,3], col = 'red', lwd = 1, lty = 2)
-abline(h = T2.I[2,1], col = 'red', lwd = 1, lty = 2)
-abline(h = T2.I[2,3], col  ='red', lwd = 1, lty = 2)
+plot(data, asp = 1, pch = 1, 
+     xlim = c(min(data[, 1]) - 2, max(data[, 1]) + 2))
 
-points(mu0[1], mu0[2], pch = 16, col = 'grey35', cex = 1.5)
-abline(v = mu0[1], h = mu0[2], col = 'grey35')
+abline(h = mu0[1], v = mu0[2], col = 'grey35', lty = 2)
+points(mu0[1], mu0[2], col = 'red', pch = 9, cex = 1)
 
-segments(T2.I[1, 1], mu0[2], T2.I[1, 3], mu0[2], lty = 1, lwd = 2, col = 'red')
-segments(mu0[1], T2.I[2, 1], mu0[1], T2.I[2, 3], lty = 1, lwd = 2, col = 'red')
+ellipse(center = M, shape = S/n, radius = sqrt(cfr.fisher), lwd = 2, lty = 2, col = 'blue')
 
-abline(v = BF.I[1,1], col = 'orange', lwd = 1, lty = 2)
-abline(v = BF.I[1,3], col = 'orange', lwd = 1, lty = 2)
-abline(h = BF.I[2,1], col = 'orange', lwd = 1, lty = 2)
-abline(h = BF.I[2,3], col  ='orange', lwd = 1, lty = 2)
+abline(v = T2.I[1, 1], col = 'orange', lwd = 1, lty = 2)
+abline(v = T2.I[1, 3], col = 'orange', lwd = 1, lty = 2)
+abline(h = T2.I[2, 1], col = 'orange', lwd = 1, lty = 2)
+abline(h = T2.I[2, 3], col = 'orange', lwd = 1, lty = 2)
 
-points(mu0[1], mu0[2], pch = 16, col = 'grey35', cex = 1.5)
-abline(v = mu0[1], h = mu0[2], col = 'grey35')
+segments(T2.I[1, 1], mu0[2], T2.I[1, 3], mu0[2], lty = 1, lwd = 2, col = 'orange')
+segments(mu0[1], T2.I[2, 1], mu0[1], T2.I[2, 3], lty = 1, lwd = 2, col = 'orange')
 
-segments(BF.I[1, 1], mu0[2], BF.I[1, 3], mu0[2], lty = 1, lwd = 2, col = 'orange')
-segments(mu0[1], BF.I[2, 1], mu0[1], BF.I[2, 3], lty = 1, lwd = 2, col = 'orange')
+abline(v = BF.I[1, 1], col = 'purple', lwd = 1, lty = 2)
+abline(v = BF.I[1, 3], col = 'purple', lwd = 1, lty = 2)
+abline(h = BF.I[2, 1], col = 'purple', lwd = 1, lty = 2)
+abline(h = BF.I[2, 3], col = 'purple', lwd = 1, lty = 2)
+
+segments(BF.I[1, 1], mu0[2], BF.I[1, 3], mu0[2], lty = 1, lwd = 2, col = 'purple')
+segments(mu0[1], BF.I[2, 1], mu0[1], BF.I[2, 3], lty = 1, lwd = 2, col = 'purple')
+
+legend('topright', c('Bonf. CI', 'Sim-T2 CI'), col = c('purple', 'orange'), lty = 1, lwd = 2)
 
 
 ###### Along Worst Direction ------
 
 worst <- S.inv %*% (M - mu0)
-worst <- worst / sqrt(sum(worst ^ 2))
+worst <- worst / sqrt(sum(worst^2))
 worst
 
 T2
@@ -562,8 +562,8 @@ x.max <- CI.worst[3] * worst # (x,y) coords of the upper bound of the interval
 m1.ort <- - worst[1] / worst[2] # Slope of the line orthogonal to worst
 q.min.ort <- x.min[2] - m1.ort * x.min[1] # Intercept of line of slope m1.ort passing by x.min
 q.max.ort <- x.max[2] - m1.ort * x.max[1] # Intercept of line of slope m1.ort passing by x.max
-abline(q.min.ort, m1.ort, col = 'forestgreen', lty = 2,lwd = 1)
-abline(q.max.ort, m1.ort, col = 'forestgreen', lty = 2,lwd = 1)
+abline(q.min.ort, m1.ort, col = 'forestgreen', lty = 2, lwd = 1)
+abline(q.max.ort, m1.ort, col = 'forestgreen', lty = 2, lwd = 1)
 
 m1 = worst[2] / worst[1] # worst direction
 q1 <- mu0[2] - m1 * mu0[1]
@@ -575,7 +575,38 @@ x.max.plot <- c((q1 - q.max.ort) / (m1.ort - m1), m1 * (q1 - q.max.ort) / (m1.or
 segments(x.min.plot[1], x.min.plot[2], x.max.plot[1], x.max.plot[2], lty = 1, lwd = 2, col = 'forestgreen')
 
 
-##### Confidence Region Characterization ------
+###### Along Generic Direction ------
+
+dir <- rbind(1, 2)
+dir <- dir / sqrt(sum(dir^2))
+dir
+
+CI.dir <- c(M %*% dir - sqrt(cfr.fisher*(t(dir) %*% S %*% dir) / n),
+            M %*% dir,
+            M %*% dir + sqrt(cfr.fisher*(t(dir) %*% S %*% dir) / n))
+CI.dir
+mu0 %*% dir
+(CI.dir[1] < mu0 %*% dir) & (mu0 %*% dir < CI.dir[3])   
+
+x.min <- CI.dir[1] * dir # (x,y) coords of the lower bound of the interval
+x.max <- CI.dir[3] * dir # (x,y) coords of the upper bound of the interval
+m1.ort <- - dir[1] / dir[2] # Slope of the line orthogonal to dir
+q.min.ort <- x.min[2] - m1.ort * x.min[1] # Intercept of line of slope m1.ort passing by x.min
+q.max.ort <- x.max[2] - m1.ort * x.max[1] # Intercept of line of slope m1.ort passing by x.max
+abline(q.min.ort, m1.ort, col = 'light blue', lty = 2, lwd = 1)
+abline(q.max.ort, m1.ort, col = 'light blue', lty = 2, lwd = 1)
+
+m1 = dir[2] / dir[1] # dir direction
+q1 <- mu0[2] - m1 * mu0[1]
+abline(q1, m1, col = 'grey35')
+
+x.min.plot <- c((q1 - q.min.ort) / (m1.ort - m1), m1 * (q1 - q.min.ort) / (m1.ort - m1) + q1)
+x.max.plot <- c((q1 - q.max.ort) / (m1.ort - m1), m1 * (q1 - q.max.ort) / (m1.ort - m1) + q1)
+
+segments(x.min.plot[1], x.min.plot[2], x.max.plot[1], x.max.plot[2], lty = 1, lwd = 2, col = 'light blue')
+
+
+###### Characterization -------
 
 # Center:
 M
@@ -585,17 +616,16 @@ eigen(S/n)$vectors
 eigen(S/n)$vectors[, 1]
 eigen(S/n)$vectors[, 2]
 
-# Length of the semi-axes of the ellipse:
-r <- sqrt(cfr.fisher)
-r * sqrt(eigen(S/n)$values)
-
-plot(data, asp = 1)
 abline(a = M[2] - eigen(S)$vectors[2, 1] / eigen(S)$vectors[1, 1] * M[1], 
        b = eigen(S)$vectors[2, 1] / eigen(S)$vectors[1, 1], 
        lty = 2, col = 'dark red', lwd = 2)
 abline(a = M[2] - eigen(S)$vectors[2, 2] / eigen(S)$vectors[1, 2] * M[1], 
        b = eigen(S)$vectors[2, 2] / eigen(S)$vectors[1, 2], 
        lty = 2, col = 'red', lwd = 2)
+
+# Length of the semi-axes of the ellipse:
+r <- sqrt(cfr.fisher)
+r * sqrt(eigen(S/n)$values)
 
 
 ###------------------------------###
@@ -866,6 +896,16 @@ BF.I <- cbind(D.mean - cfr.t * sqrt(diag(D.cov)/n),
 dimnames(BF.I)[[2]] <- c('inf', 'center', 'sup')
 BF.I
 
+# Confidence Interval for the Variance
+
+k <- 1 # eventual Bonferroni correction
+
+Var.I <- cbind((n-1) * diag(D.cov) / qchisq(1 - (alpha)/(2*k), n-1),
+               diag(D.cov),
+               (n-1) * diag(D.cov) / qchisq(alpha/(2*k), n-1))
+dimnames(Var.I)[[2]] <- c('inf', 'center', 'sup')
+Var.I
+
 
 ##### Confidence Region -----
 
@@ -876,7 +916,7 @@ plot(D, asp = 1, pch = 1,
 abline(h = delta.0[1], v = delta.0[2], col = 'grey35', lty = 2)
 points(delta.0[1], delta.0[2], col = 'red', pch = 9, cex = 1)
 
-ellipse(center = D.mean, shape = D.cov/n, radius = sqrt(cfr.fisher), lwd = 2, col = 'grey')
+ellipse(center = D.mean, shape = D.cov/n, radius = sqrt(cfr.fisher), lwd = 2, lty = 2, col = 'blue')
 
 abline(v = T2.I[1, 1], col = 'orange', lwd = 1, lty = 2)
 abline(v = T2.I[1, 3], col = 'orange', lwd = 1, lty = 2)
@@ -894,7 +934,7 @@ abline(h = BF.I[2, 3], col = 'purple', lwd = 1, lty = 2)
 segments(BF.I[1, 1], 0, BF.I[1, 3], 0, lty = 1, lwd = 2, col = 'purple')
 segments(0, BF.I[2, 1], 0, BF.I[2, 3], lty = 1, lwd = 2, col = 'purple')
 
-legend('topright', c('Bonf. IC', 'Sim-T2 IC'), col = c('purple', 'orange'), lty = 1, lwd = 2)
+legend('topright', c('Bonf. CI', 'Sim-T2 CI'), col = c('purple', 'orange'), lty = 1, lwd = 2)
 
 worst <- D.invcov %*% (D.mean - delta.0)
 worst <- worst / sqrt(sum(worst ^ 2))
@@ -979,6 +1019,16 @@ BF.I <- cbind(Md - cfr.t * sqrt(diag(Sd)/n),
 dimnames(BF.I)[[2]] <- c('inf', 'center', 'sup')
 BF.I
 
+# Confidence Interval for the Variance
+
+k <- 1 # eventual Bonferroni correction
+
+Var.I <- cbind((n-1) * diag(Sd) / qchisq(1 - (alpha)/(2*k), n-1),
+               diag(Sd),
+               (n-1) * diag(Sd) / qchisq(alpha/(2*k), n-1))
+dimnames(Var.I)[[2]] <- c('inf', 'center', 'sup')
+Var.I
+
 
 ##### Plotting Intervals -----
 
@@ -995,7 +1045,7 @@ points(1:(q-1)+.1, T2.I[, 2], col = 'orange', pch = 16)
 
 abline(h = 0, col = 'grey', lty = 2)
 
-legend('topright', c('Bonf. IC', 'Sim-T2 IC'), col = c('purple', 'orange'), lty = 1, lwd = 2)
+legend('topright', c('Bonf. CI', 'Sim-T2 CI'), col = c('purple', 'orange'), lty = 1, lwd = 2)
 
 
 ##### Confidence Region -----
@@ -1009,7 +1059,7 @@ plot(diff[, 1], diff[, 2], asp = 1, pch = 1,
 abline(h = delta.0[1], v = delta.0[2], col = 'grey35', lty = 2)
 points(delta.0[1], delta.0[2], col = 'red', pch = 9, cex = 1)
 
-ellipse(center = c(Md), shape = Sd/n, radius = sqrt(cfr.fisher), lwd = 2, col = 'grey')
+ellipse(center = c(Md), shape = Sd/n, radius = sqrt(cfr.fisher), lwd = 2, lty = 2, col = 'blue')
 
 abline(v = T2.I[1, 1], col = 'orange', lwd = 1, lty = 2)
 abline(v = T2.I[1, 3], col = 'orange', lwd = 1, lty = 2)
@@ -1027,7 +1077,7 @@ abline(h = BF.I[2, 3], col = 'purple', lwd = 1, lty = 2)
 segments(BF.I[1, 1], 0, BF.I[1, 3], 0, lty = 1, lwd = 2, col = 'purple')
 segments(0, BF.I[2, 1], 0, BF.I[2, 3], lty = 1, lwd = 2, col = 'purple')
 
-legend('topright', c('Bonf. IC', 'Sim-T2 IC'), col = c('purple', 'orange'), lty = 1, lwd = 2)
+legend('topright', c('Bonf. CI', 'Sim-T2 CI'), col = c('purple', 'orange'), lty = 1, lwd = 2)
 
 worst <- Sdinv %*% (Md - delta.0)
 worst <- worst / sqrt(sum(worst ^ 2))
@@ -1193,6 +1243,16 @@ BF.I <- cbind(data1.mean - data2.mean - cfr.t * sqrt(diag(Sp) * (1 / n1 + 1 / n2
 dimnames(BF.I)[[2]] <- c('inf', 'center', 'sup')
 BF.I
 
+# Confidence Interval for the Variance
+
+k <- 1 # eventual Bonferroni correction
+
+Var.I <- cbind((n1 + n2 - 2) * diag(Sp) / qchisq(1 - (alpha)/(2*k), n1 + n2 - 2),
+               diag(Sp),
+               (n1 + n2 - 2) * diag(Sp) / qchisq(alpha/(2*k), n1 + n2 - 2))
+dimnames(Var.I)[[2]] <- c('inf', 'center', 'sup')
+Var.I
+
 
 ##### Confidence Region -----
 
@@ -1202,7 +1262,7 @@ plot(data1.mean[1] - data2.mean[1], data1.mean[2] - data2.mean[2], asp = 1, pch 
 abline(h = delta.0[1], v = delta.0[2], col = 'grey35', lty = 2)
 points(delta.0[1], delta.0[2], col = 'red', pch = 9, cex = 1)
 
-ellipse(center = (data1.mean - data2.mean), shape = Sp * (n1+n2)/(n1*n2), radius = sqrt(cfr.fisher), lwd = 2, col = 'grey')
+ellipse(center = (data1.mean - data2.mean), shape = Sp * (n1+n2)/(n1*n2), radius = sqrt(cfr.fisher), lwd = 2, lty = 2, col = 'blue')
 
 abline(v = T2.I[1, 1], col = 'orange', lwd = 1, lty = 2)
 abline(v = T2.I[1, 3], col = 'orange', lwd = 1, lty = 2)
@@ -1220,7 +1280,7 @@ abline(h = BF.I[2, 3], col = 'purple', lwd = 1, lty = 2)
 segments(BF.I[1, 1], 0, BF.I[1, 3], 0, lty = 1, lwd = 2, col = 'purple')
 segments(0, BF.I[2, 1], 0, BF.I[2, 3], lty = 1, lwd = 2, col = 'purple')
 
-legend('topright', c('Bonf. IC', 'Sim-T2 IC'), col = c('purple', 'orange'), lty = 1, lwd = 2)
+legend('topright', c('Bonf. CI', 'Sim-T2 CI'), col = c('purple', 'orange'), lty = 1, lwd = 2)
 
 worst <- Spinv %*% (data1.mean - data2.mean - delta.0)
 worst <- worst / sqrt(sum(worst^2))
@@ -2924,41 +2984,106 @@ SSres / SStot # percentage of unexplained variability
 
 #### Inference on the Parameters ----
 
+alpha = 0.05
+df <- m0$df # n - (r+1)
+r <- length(m0$coefficients) - 1 # number of regressors
+
 # H0: (beta2, beta4) == (0, 0) vs H1: (beta2, beta4) != (0, 0)
 
-linearHypothesis(m0,
-                 rbind(c(0,0,1,0,0),
-                       c(0,0,0,0,1)),
-                 c(0,0)) #!library(car)
+C <- rbind(c(0,0,1,0,0),
+           c(0,0,0,0,1))
+
+linearHypothesis(m0, C, c(0,0)) #!library(car)
 
 p <- 2  # number of tested coefficients
-r <- 4  # number of regressors
 
 # Confidence Region
 
-c(m0$coefficients[3], m0$coefficients[5]) # center
-eigen(vcov(m0)[c(3, 5), c(3, 5)])$vectors # direction of the axes
+semiaxes.length <- sqrt(p*qf(1-alpha, p, df)) * sqrt(eigen(vcov(m0)[c(3, 5), c(3, 5)])$values)
 
 plot(m0$coefficients[3], m0$coefficients[5], 
-     xlim = c(-m0$coefficients[3], 3*m0$coefficients[3]), asp = 1, 
+     xlim = c(m0$coefficients[3] - max(semiaxes.length) - 3, m0$coefficients[3] + max(semiaxes.length) + 3), asp = 1, 
      xlab = 'beta[2]', ylab = 'beta[4]')
-ellipse(c(m0$coefficients[3], m0$coefficients[5]), vcov(m0)[c(3, 5), c(3, 5)], sqrt(p*qf(1-0.05, p, n-(r+1))))
-abline(v = 0)
-abline(h = 0)
 
-# Bonferroni intervals (level 95%)
+abline(h = 0, v = 0, col = 'grey35', lty = 2)
+points(0, 0, col = 'red', pch = 9, cex = 1)
 
-BF.I <- rbind(beta2 = c(m0$coefficients[3] - sqrt(vcov(m0)[3, 3])*qt(1-0.05/(2*p), n-(r+1)),
-                        m0$coefficients[3] + sqrt(vcov(m0)[3, 3])*qt(1-0.05/(2*p), n-(r+1))),
-              beta4 = c(m0$coefficients[5] - sqrt(vcov(m0)[5, 5])*qt(1-0.05/(2*p), n-(r+1)),
-                        m0$coefficients[5] + sqrt(vcov(m0)[5, 5])*qt(1-0.05/(2*p), n-(r+1))))
+ellipse(c(m0$coefficients[3], m0$coefficients[5]), vcov(m0)[c(3, 5), c(3, 5)], sqrt(p*qf(1-alpha, p, df)), lty = 2, col = 'blue')
+
+center <- C %*% m0$coefficients
+shape <- C %*% vcov(m0) %*% t(C)
+
+# Simultaneous T2 intervals
+
+cfr.fisher <- p*qf(1-alpha, p, df)
+
+T2.I <- cbind(center - sqrt(cfr.fisher * diag(shape)), 
+              center, 
+              center + sqrt(cfr.fisher * diag(shape)))
+colnames(T2.I) <- c('inf', 'center', 'sup')
+rownames(T2.I) <- c(names(m0$coefficients[which(C[1, ] == 1)]), names(m0$coefficients[which(C[2, ] == 1)]))
+T2.I
+
+# or
+
+T2.I <- rbind(c(m0$coefficients[3] - sqrt(cfr.fisher * vcov(m0)[3, 3]),
+                m0$coefficients[3],
+                m0$coefficients[3] + sqrt(cfr.fisher * vcov(m0)[3, 3])),
+              
+              c(m0$coefficients[5] - sqrt(cfr.fisher * vcov(m0)[5, 5]),
+                m0$coefficients[5],
+                m0$coefficients[5] + sqrt(cfr.fisher * vcov(m0)[5, 5])))
+colnames(T2.I) <- c('inf', 'center', 'sup')
+rownames(T2.I) <- c(names(m0$coefficients[c(3, 5)]))
+T2.I
+
+# Bonferroni intervals 
+
+qT <- qt(1 - alpha/(2*p), df)
+
+BF.I <- cbind(center - sqrt(diag(shape)) * qT,
+              center,
+              center + sqrt(diag(shape)) * qT)
+colnames(BF.I) <- c('inf', 'center', 'sup')
+rownames(BF.I) <- c(names(m0$coefficients[which(C[1, ] == 1)]), names(m0$coefficients[which(C[2, ] == 1)]))
+BF.I
+
+# or 
+
+BF.I <- rbind(c(m0$coefficients[3] - sqrt(vcov(m0)[3, 3]) * qT,
+                m0$coefficients[3],
+                m0$coefficients[3] + sqrt(vcov(m0)[3, 3]) * qT),
+              
+              c(m0$coefficients[5] - sqrt(vcov(m0)[5, 5]) * qT,
+                m0$coefficients[5],
+                m0$coefficients[5] + sqrt(vcov(m0)[5, 5]) * qT))
+colnames(BF.I) <- c('inf', 'center', 'sup')
+rownames(BF.I) <- c(names(m0$coefficients[c(3, 5)]))
 BF.I
 
 # or (only for intervals on beta)
 
-confint(m0, level = 1-0.05/p)[c(3, 5), ]  # Bonferroni correction!
+confint(m0, level = 1-alpha/p)[c(3, 5), ]  # Bonferroni correction!
 # Note: confint() returns the confidence intervals one-at-a-time;
 # to have a global level 95% we need to include a correction
+
+abline(v = T2.I[1, 1], col = 'orange', lwd = 1, lty = 2)
+abline(v = T2.I[1, 3], col = 'orange', lwd = 1, lty = 2)
+abline(h = T2.I[2, 1], col = 'orange', lwd = 1, lty = 2)
+abline(h = T2.I[2, 3], col = 'orange', lwd = 1, lty = 2)
+
+segments(T2.I[1, 1], 0, T2.I[1, 3], 0, lty = 1, lwd = 2, col = 'orange')
+segments(0, T2.I[2, 1], 0, T2.I[2, 3], lty = 1, lwd = 2, col = 'orange')
+
+abline(v = BF.I[1, 1], col = 'purple', lwd = 1, lty = 2)
+abline(v = BF.I[1, 3], col = 'purple', lwd = 1, lty = 2)
+abline(h = BF.I[2, 1], col = 'purple', lwd = 1, lty = 2)
+abline(h = BF.I[2, 3], col = 'purple', lwd = 1, lty = 2)
+
+segments(BF.I[1, 1], 0, BF.I[1, 3], 0, lty = 1, lwd = 2, col = 'purple')
+segments(0, BF.I[2, 1], 0, BF.I[2, 3], lty = 1, lwd = 2, col = 'purple')
+
+legend('topright', c('Bonf. CI', 'Sim-T2 CI'), col = c('purple', 'orange'), lty = 1, lwd = 2)
 
 # H0: (beta2+beta4, beta3) == (0,0) vs H1: (beta2+beta4, beta3) != (0,0)
 
@@ -2968,46 +3093,118 @@ C <- rbind(c(0,0,1,0,1),
 linearHypothesis(m0, C, c(0,0))
 
 p <- 2  # number of tested coefficients
-r <- 4  # number of regressors
 
 # Confidence Region
 
 center <- C %*% m0$coefficients
 shape <- C %*% vcov(m0) %*% t(C)
 
-eigen(shape)$vectors # direction of the axes
+semiaxes.length <- sqrt(p*qf(1-alpha, p, df)) * sqrt(eigen(shape)$values)
 
 plot(center[1], center[2], 
-     xlim = c(-10, 20), asp = 1, 
+     xlim = c(center[1] - max(semiaxes.length) - 3, center[1] + max(semiaxes.length) + 3), asp = 1, 
      xlab = 'beta[2]+beta[4]', ylab = 'beta[3]')
-ellipse(c(center), shape, sqrt(p*qf(1-0.05, p, n-(r+1))))
-abline(v = 0)
-abline(h = 0)
 
-# Bonferroni intervals (level 95%)
+abline(h = 0, v = 0, col = 'grey35', lty = 2)
+points(0, 0, col = 'red', pch = 9, cex = 1)
 
-BF.I <- rbind(beta2.4 = c(center[1] - sqrt(t(C[1, ]) %*% vcov(m0) %*% C[1, ]) * qt(1-0.05/(2*p), n-(r+1)),
-                          center[1] + sqrt(t(C[1, ]) %*% vcov(m0) %*% C[1, ]) * qt(1-0.05/(2*p), n-(r+1))),
-              beta3 = c(center[2] - sqrt(t(C[2, ]) %*% vcov(m0) %*% C[2, ]) * qt(1-0.05/(2*p), n-(r+1)),
-                        center[2] + sqrt(t(C[2, ]) %*% vcov(m0) %*% C[2, ]) * qt(1-0.05/(2*p), n-(r+1))))
-colnames(BF.I) <- c("inf", "sup")
+ellipse(c(center), shape, sqrt(p*qf(1-alpha, p, df)), lty = 2, col = 'blue')
+
+# Simultaneous T2 intervals
+
+cfr.fisher <- p*qf(1-alpha, p, df)
+
+T2.I <- cbind(center - sqrt(cfr.fisher * diag(shape)), 
+              center, 
+              center + sqrt(cfr.fisher * diag(shape)))
+colnames(T2.I) <- c('inf', 'center', 'sup')
+T2.I
+
+# or
+
+T2.I <- rbind(beta2.4 = c(center[1] - sqrt(cfr.fisher * shape[1, 1]),
+                          center[1],
+                          center[1] + sqrt(cfr.fisher * shape[1, 1])),
+              
+              beta3 = c(center[2] - sqrt(cfr.fisher * shape[2, 2]),
+                        center[2],
+                        center[2] + sqrt(cfr.fisher * shape[2, 2])))
+colnames(T2.I) <- c("inf", "center", "sup")
+T2.I
+
+# or 
+
+BF.I <- rbind(beta2.4 = c(center[1] - sqrt(cfr.fisher * t(C[1, ]) %*% vcov(m0) %*% C[1, ]),
+                          center[1],
+                          center[1] + sqrt(cfr.fisher * t(C[1, ]) %*% vcov(m0) %*% C[1, ])),
+              
+              beta3 = c(center[2] - sqrt(cfr.fisher * t(C[2, ]) %*% vcov(m0) %*% C[2, ]),
+                        center[2],
+                        center[2] + sqrt(cfr.fisher * t(C[2, ]) %*% vcov(m0) %*% C[2, ])))
+colnames(BF.I) <- c("inf", "center", "sup")
+BF.I
+
+# Bonferroni intervals
+
+BF.I <- cbind(center - sqrt(diag(shape)) * qT,
+              center,
+              center + sqrt(diag(shape)) * qT)
+colnames(BF.I) <- c('inf', 'center', 'sup')
+BF.I
+
+# or 
+
+BF.I <- rbind(beta2.4 = c(center[1] - sqrt(shape[1, 1]) * qT,
+                          center[1],
+                          center[1] + sqrt(shape[1, 1]) * qT),
+              
+              beta3 = c(center[2] - sqrt(shape[2, 2]) * qT,
+                        center[2],
+                        center[2] + sqrt(shape[2, 2]) * qT))
+colnames(BF.I) <- c("inf", "center", "sup")
 BF.I
 
 # or
 
-BF.I <- rbind(beta2.4 = c(center[1] - sqrt(shape[1, 1]) * qt(1-0.05/(2*p), n-(r+1)),
-                          center[1] + sqrt(shape[1, 1]) * qt(1-0.05/(2*p), n-(r+1))),
-              beta3 = c(center[2] - sqrt(shape[2, 2]) * qt(1-0.05/(2*p), n-(r+1)),
-                        center[2] + sqrt(shape[2, 2]) * qt(1-0.05/(2*p), n-(r+1))))
-colnames(BF.I) <- c("inf", "sup")
+BF.I <- rbind(beta2.4 = c(center[1] - sqrt(t(C[1, ]) %*% vcov(m0) %*% C[1, ]) * qT,
+                          center[1],
+                          center[1] + sqrt(t(C[1, ]) %*% vcov(m0) %*% C[1, ]) * qT),
+              
+              beta3 = c(center[2] - sqrt(t(C[2, ]) %*% vcov(m0) %*% C[2, ]) * qT,
+                        center[2],
+                        center[2] + sqrt(t(C[2, ]) %*% vcov(m0) %*% C[2, ]) * qT))
+colnames(BF.I) <- c("inf", "center", "sup")
 BF.I
 
-# or
+abline(v = T2.I[1, 1], col = 'orange', lwd = 1, lty = 2)
+abline(v = T2.I[1, 3], col = 'orange', lwd = 1, lty = 2)
+abline(h = T2.I[2, 1], col = 'orange', lwd = 1, lty = 2)
+abline(h = T2.I[2, 3], col = 'orange', lwd = 1, lty = 2)
 
-BF.I <- rbind(inf = c(center - sqrt(diag(shape)) * qt(1-0.05/(2*p), n-(r+1))),
-              sup = c(center + sqrt(diag(shape)) * qt(1-0.05/(2*p), n-(r+1))))
-colnames(BF.I) <- c("beta[2]+beta[4]", "beta[3]")
-BF.I
+segments(T2.I[1, 1], 0, T2.I[1, 3], 0, lty = 1, lwd = 2, col = 'orange')
+segments(0, T2.I[2, 1], 0, T2.I[2, 3], lty = 1, lwd = 2, col = 'orange')
+
+abline(v = BF.I[1, 1], col = 'purple', lwd = 1, lty = 2)
+abline(v = BF.I[1, 3], col = 'purple', lwd = 1, lty = 2)
+abline(h = BF.I[2, 1], col = 'purple', lwd = 1, lty = 2)
+abline(h = BF.I[2, 3], col = 'purple', lwd = 1, lty = 2)
+
+segments(BF.I[1, 1], 0, BF.I[1, 3], 0, lty = 1, lwd = 2, col = 'purple')
+segments(0, BF.I[2, 1], 0, BF.I[2, 3], lty = 1, lwd = 2, col = 'purple')
+
+legend('topright', c('Bonf. CI', 'Sim-T2 CI'), col = c('purple', 'orange'), lty = 1, lwd = 2)
+
+# Confidence Interval for the Variance
+
+S2 <- sum((m0$residuals)^2)/m0$df
+
+k <- 1 # eventual Bonferroni correction
+
+Var.I <- cbind(df * S2 / qchisq(1 - (alpha)/(2*k), df),
+               S2,
+               df * S2 / qchisq(alpha/(2*k), df))
+colnames(Var.I) <- c("inf", "center", "sup")
+Var.I
 
 
 #### Prediction ----
