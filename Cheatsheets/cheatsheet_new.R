@@ -461,7 +461,6 @@ T2.I.F2 <- c(M[2] - sqrt(cfr.fisher * S[2, 2] / n),
 T2.I <- rbind(T2.I.F1, T2.I.F2)
 dimnames(T2.I)[[2]] <- c('inf', 'center', 'sup')
 dimnames(T2.I)[[1]] <- c(dimnames(data)[[2]][1], dimnames(data)[[2]][2])
-
 T2.I
 
 rect(T2.I[1,1], T2.I[2,1], T2.I[1,3], T2.I[2,3], border = 'orange', lwd = 2)
@@ -471,6 +470,37 @@ matplot(1:p, 1:p, pch = '', ylim = range(data), xlab = 'Variables', ylab = 'T2 f
 for(i in 1:p) segments(i, T2.I[i, 1], i, T2.I[i, 3], lwd = 3, col = i)
 points(1:p, T2.I[, 2], pch = 16, col = 1:p)
 points(1:p, mu0, lwd = 3, col = 'red')
+
+# Generic Combinations
+
+A <- rbind(c(1,1), # sum of the variables
+           c(1,-1)) # difference of the variables
+
+center <- A %*% M
+shape <- A %*% S %*% t(A)
+
+T2.I <- cbind(center - sqrt(cfr.fisher * diag(shape)/n),
+              center,
+              center + sqrt(cfr.fisher * diag(shape)/n))
+colnames(T2.I) <- c('inf', 'center', 'sup')
+T2.I
+
+# or
+
+a1 <- c(1, 1)
+a2 <- c(1, -1)
+
+T2.I.a1 <- c(a1 %*% M - sqrt(cfr.fisher * t(a1) %*% S %*% a1 / n),
+             a1 %*% M,
+             a1 %*% M + sqrt(cfr.fisher * t(a1) %*% S %*% a1 / n))
+
+T2.I.a2 <- c(a2 %*% M - sqrt(cfr.fisher * t(a2) %*% S %*% a2 / n),
+             a2 %*% M,
+             a2 %*% M + sqrt(cfr.fisher * t(a2) %*% S %*% a2 / n))
+
+T2.I <- rbind(T2.I.a1, T2.I.a2)
+dimnames(T2.I)[[2]] <- c('inf', 'center', 'sup')
+T2.I
 
 
 ###### Bonferroni Confidence Intervals -------
@@ -497,7 +527,6 @@ BF.I.F2 <- c(M[2] - cfr.t * sqrt(S[2, 2] / n),
 BF.I <- rbind(BF.I.F1, BF.I.F2)
 dimnames(BF.I)[[2]] <- c('inf', 'center', 'sup')
 dimnames(BF.I)[[1]] <- c(dimnames(data)[[2]][1], dimnames(data)[[2]][2])
-
 BF.I
 
 rect(BF.I[1,1], BF.I[2,1], BF.I[1,3], BF.I[2,3], border = 'purple', lwd = 2)
@@ -508,10 +537,55 @@ for(i in 1:p) segments(i, BF.I[i, 1], i, BF.I[i, 3], lwd = 3, col = i)
 points(1:p, BF.I[, 2], pch = 16, col = 1:p)
 points(1:p, mu0, lwd = 3, col = 'red')
 
+# Generic Combinations
+
+A <- rbind(c(1,1), # sum of the variables
+           c(1,-1)) # difference of the variables
+
+k <- dim(A)[1]
+cfr.t <- qt(1 - alpha/(2*k), n-1)
+
+center <- A %*% M
+shape <- A %*% S %*% t(A)
+
+BF.I <- cbind(center - cfr.t * sqrt(diag(shape)/n),
+              center,
+              center + cfr.t * sqrt(diag(shape)/n))
+colnames(BF.I) <- c('inf', 'center', 'sup')
+BF.I
+
+# or
+
+a1 <- c(1, 1)
+a2 <- c(1, -1)
+
+BF.I.a1 <- c(a1 %*% M - cfr.t * sqrt(t(a1) %*% S %*% a1 / n),
+             a1 %*% M,
+             a1 %*% M + cfr.t * sqrt(t(a1) %*% S %*% a1 / n))
+
+BF.I.a2 <- c(a2 %*% M - cfr.t * sqrt(t(a2) %*% S %*% a2 / n),
+             a2 %*% M,
+             a2 %*% M + cfr.t * sqrt(t(a2) %*% S %*% a2 / n))
+
+BF.I <- rbind(BF.I.a1, BF.I.a2)
+dimnames(BF.I)[[2]] <- c('inf', 'center', 'sup')
+BF.I
+
+
+###### Confidence Intervals for the Variance -------
+
+k <- 1 # eventual Bonferroni correction
+
+Var.I <- cbind((n-1) * diag(S) / qchisq(1 - (alpha)/(2*k), n-1),
+               diag(S),
+               (n-1) * diag(S) / qchisq(alpha/(2*k), n-1))
+dimnames(Var.I)[[2]] <- c('inf', 'center', 'sup')
+Var.I
+
 
 ##### Confidence Region ------
 
-###### Along Cartesian Axes ------
+# Axes identified by the two original variables
 
 plot(data, asp = 1, pch = 1, 
      xlim = c(min(data[, 1]) - 2, max(data[, 1]) + 2))
@@ -520,6 +594,20 @@ abline(h = mu0[1], v = mu0[2], col = 'grey35', lty = 2)
 points(mu0[1], mu0[2], col = 'red', pch = 9, cex = 1)
 
 ellipse(center = M, shape = S/n, radius = sqrt(cfr.fisher), lwd = 2, lty = 2, col = 'blue')
+
+
+# Axes identified by two linear combinations
+
+semiaxes.length <- sqrt(cfr.fisher) * sqrt(eigen(shape/n)$values)
+
+plot(center[1], center[2], 
+     xlim = c(center[1] - 1.5 * max(semiaxes.length), center[1] + 1.5 * max(semiaxes.length)), asp = 1, 
+     xlab = 'feat1+feat2', ylab = 'feat1-feat2')
+
+ellipse(center = c(center), shape = shape/n, radius = sqrt(cfr.fisher), lty = 2, col = 'blue')
+
+
+###### Plot Intervals Along Cartesian Axes ------
 
 abline(v = T2.I[1, 1], col = 'orange', lwd = 1, lty = 2)
 abline(v = T2.I[1, 3], col = 'orange', lwd = 1, lty = 2)
@@ -540,7 +628,7 @@ segments(mu0[1], BF.I[2, 1], mu0[1], BF.I[2, 3], lty = 1, lwd = 2, col = 'purple
 legend('topright', c('Bonf. CI', 'Sim-T2 CI'), col = c('purple', 'orange'), lty = 1, lwd = 2)
 
 
-###### Along Worst Direction ------
+###### Plot Intervals Along Worst Direction ------
 
 worst <- S.inv %*% (M - mu0)
 worst <- worst / sqrt(sum(worst^2))
@@ -550,9 +638,9 @@ T2
 n * (t(worst) %*% (M - mu0))^2 / (t(worst) %*% S %*% worst)
 (mean(as.matrix(data) %*% worst) - (mu0 %*% worst))^2 / (var(as.matrix(data) %*% worst) / n)
 
-CI.worst <- c(M %*% worst - sqrt(cfr.fisher*(t(worst) %*% S %*% worst) / n),
+CI.worst <- c(M %*% worst - sqrt(cfr.fisher * (t(worst) %*% S %*% worst) / n),
               M %*% worst,
-              M %*% worst + sqrt(cfr.fisher*(t(worst) %*% S %*% worst) / n))
+              M %*% worst + sqrt(cfr.fisher * (t(worst) %*% S %*% worst) / n))
 CI.worst
 mu0 %*% worst
 (CI.worst[1] < mu0 %*% worst) & (mu0 %*% worst < CI.worst[3])   
@@ -575,15 +663,15 @@ x.max.plot <- c((q1 - q.max.ort) / (m1.ort - m1), m1 * (q1 - q.max.ort) / (m1.or
 segments(x.min.plot[1], x.min.plot[2], x.max.plot[1], x.max.plot[2], lty = 1, lwd = 2, col = 'forestgreen')
 
 
-###### Along Generic Direction ------
+###### Plot Intervals Along Generic Direction ------
 
 dir <- rbind(1, 2)
 dir <- dir / sqrt(sum(dir^2))
 dir
 
-CI.dir <- c(M %*% dir - sqrt(cfr.fisher*(t(dir) %*% S %*% dir) / n),
+CI.dir <- c(M %*% dir - sqrt(cfr.fisher * (t(dir) %*% S %*% dir) / n),
             M %*% dir,
-            M %*% dir + sqrt(cfr.fisher*(t(dir) %*% S %*% dir) / n))
+            M %*% dir + sqrt(cfr.fisher * (t(dir) %*% S %*% dir) / n))
 CI.dir
 mu0 %*% dir
 (CI.dir[1] < mu0 %*% dir) & (mu0 %*% dir < CI.dir[3])   
@@ -626,6 +714,32 @@ abline(a = M[2] - eigen(S)$vectors[2, 2] / eigen(S)$vectors[1, 2] * M[1],
 # Length of the semi-axes of the ellipse:
 r <- sqrt(cfr.fisher)
 r * sqrt(eigen(S/n)$values)
+
+
+###### Extra: Elliptical Region for the Entire Population -------
+
+p <- dim(data)[2]
+alpha <- 0.01
+
+# First: check that the population is Gaussian
+mvn(data)$multivariateNormality
+
+M <- sapply(data, mean)
+S <- cov(data)
+
+# Take the radius^2 of the region
+cfr.chisq <- qchisq(1 - alpha, p)
+
+# Ellipse Characterization (we need to use asymptotics, LLN)
+eigen(S)$vectors # axes directions
+M # center
+r <- sqrt(cfr.chisq) # radius of the ellipse
+r * sqrt(eigen(S)$values) # length of the semi-axes
+
+plot(data, asp = 1, pch = 1, 
+     xlim = c(min(data[, 1]) - 5, max(data[, 1]) + 5))
+
+ellipse(center = M, shape = S, radius = sqrt(cfr.chisq), lwd = 2, lty = 2, col = 'blue', center.pch = 3)
 
 
 ###------------------------------###
@@ -2397,7 +2511,7 @@ for(g in 1:G)
 
 print(paste("APER:", APER))
 
-# or (if no priors)
+# or (if we estimate the priors through the sample frequencies)
 
 errors <- (lda.pred$class != groups)
 
@@ -2415,7 +2529,7 @@ for(g in 1:G)
 
 print(paste("AERCV:", AERCV))
 
-# or (if no priors)
+# or (if we estimate the priors through the sample frequencies)
 
 errorsCV <- (ldaCV$class != groups)
 
@@ -3034,7 +3148,7 @@ p <- 2  # number of tested coefficients
 semiaxes.length <- sqrt(p*qf(1-alpha, p, df)) * sqrt(eigen(vcov(m0)[c(3, 5), c(3, 5)])$values)
 
 plot(m0$coefficients[3], m0$coefficients[5], 
-     xlim = c(m0$coefficients[3] - max(semiaxes.length) - 3, m0$coefficients[3] + max(semiaxes.length) + 3), asp = 1, 
+     xlim = c(m0$coefficients[3] - 1.5 * max(semiaxes.length), m0$coefficients[3] + 1.5 * max(semiaxes.length)), asp = 1, 
      xlab = 'beta[2]', ylab = 'beta[4]')
 
 abline(h = 0, v = 0, col = 'grey35', lty = 2)
@@ -3134,7 +3248,7 @@ shape <- C %*% vcov(m0) %*% t(C)
 semiaxes.length <- sqrt(p*qf(1-alpha, p, df)) * sqrt(eigen(shape)$values)
 
 plot(center[1], center[2], 
-     xlim = c(center[1] - max(semiaxes.length) - 3, center[1] + max(semiaxes.length) + 3), asp = 1, 
+     xlim = c(center[1] - 1.5 * max(semiaxes.length), center[1] + 1.5 * max(semiaxes.length)), asp = 1, 
      xlab = 'beta[2]+beta[4]', ylab = 'beta[3]')
 
 abline(h = 0, v = 0, col = 'grey35', lty = 2)
@@ -3362,16 +3476,18 @@ abline(v = log(optlam.regularized), lty = 1)
 cv.regularized$nzero[which(cv.regularized$lambda == bestlam.regularized)]
 cv.regularized$nzero[which(cv.regularized$lambda == optlam.regularized)]
 # [What is it best to choose? bestlam or optlam?]
+# AFAIK, optlam is usually (always?) bigger than bestlam and therefore performs a more aggressive variable selection
+# -> take this one (unless no coefficient is left)
 
-fit.best <- glmnet(x, y, alpha = 1, lambda = bestlam.regularized)
+fit.best <- glmnet(x, y, alpha = 1, lambda = optlam.regularized)
 
-coef.best <- predict(fit.best, type = 'coefficients')[1:(r+1), ]
+coef.best <- predict(fit.regularized, s = bestlam.regularized, type = 'coefficients')[1:(r+1), ]
 coef.best[which(coef.best != 0)]
 
-coef.opt <- predict(fit.regularized, s = optlam.regularized, type = 'coefficients')[1:(r+1), ]
+coef.opt <- predict(fit.best, type = 'coefficients')[1:(r+1), ]
 coef.opt[which(coef.opt != 0)]
 
-mse.min <- mean((y - predict(fit.best, x))^2) # Wrong
+mse.min <- mean((y - predict(fit.regularized, x, s = bestlam.regularized))^2) # Wrong
 mse.min <- mean((y - predict(cv.regularized, x, s = bestlam.regularized))^2) # Wrong (same as before)
 
 mse.min <- cv.regularized$cvm[cv.regularized$lambda == bestlam.regularized] # Right
