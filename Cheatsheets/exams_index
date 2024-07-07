@@ -2,18 +2,66 @@
 TDE grouped by main argument
 ----------------------------
 
-PCA: Feb23_Pb1, Lug23_Pb1, Nov23_Pb2, Gen24_Pb2;
-Inference About the Mean: Gen23_Pb1, Lug23_Pb2, Set23_Pb1, Giu24_Pb1
-(M)ANOVA: Giu23_Pb1, Feb24_Pb1
-Classification: Feb23_Pb2, Set23_Pb2, Feb24_Pb2
-Clustering: Gen23_Pb2, Giu23_Pb2, Nov23_Pb1, Gen24_Pb1
-Linear Models: Feb23_Pb3, Lug23_Pb3, Nov23_Pb3
-Linear Mixed Models: Gen23_Pb3, Giu23_Pb3, Set23_Pb3, Gen24_Pb3, Feb24_Pb3, Giu24_Pb2
+PCA: Feb22_Pb1, Lug22_Pb1, Feb23_Pb1, Lug23_Pb1, Nov23_Pb2, Gen24_Pb2;
+Inference About the Mean: Lug21_Pb1, Gen22_Pb1, Feb22_Pb2, Giu22_Pb1, Gen23_Pb1, Lug23_Pb2, Set23_Pb1, Giu24_Pb1
+(M)ANOVA: Set21_Pb1, Lug22_Pb2, Set22_Pb1, Giu23_Pb1, Feb24_Pb1
+Classification: Lug21_Pb2, Gen22_Pb2, Giu22_Pb2, Lug22_Pb1, Sett22_Pb2, Feb23_Pb2, Set23_Pb2, Feb24_Pb2
+Clustering: Set21_Pb1, Feb22_Pb2, Lug22_Pb2, Gen23_Pb2, Giu23_Pb2, Nov23_Pb1, Gen24_Pb1
+Linear Models: Lug21_Pb3, Set21_Pb3, Gen22_Pb3, Feb22_Pb3, Lug22_Pb3, Set22_Pb3, Feb23_Pb3, Lug23_Pb3, Nov23_Pb3
+Linear Mixed Models: Giu22_Pb3, Gen23_Pb3, Giu23_Pb3, Set23_Pb3, Gen24_Pb3, Feb24_Pb3, Giu24_Pb2
 
 
 -----------
 TDE details
 -----------
+
+>>> Luglio 2021
+
+Pb1: Inference About The Mean, Bonferroni, Inference About The Mean w/ p=1
+Pb2: QDA, AERCV, New Datum, SVM (+ APER & AERCV for SVM)
+Pb3: LM w/ Interactions, ANOVA on Target (?), Linear Hypothesis, Prediction
+
+
+>>> Settembre 2021
+
+Pb1: Hierarchical Clustering, MANOVA 1_Way, Parameters, Bonferroni
+Pb3: LM, Linear Hypothesis, Prediction
+
+
+>>> Gennaio 2022
+
+Pb1: Independent Populations, Bonferroni, Independent Population w/ p=1
+Pb2: LDA, AERCV, kNN, New Datum (+ QDA, the Best Model)
+Pb3: LM w/ Interactions, ANOVA on Target (?), Linear Hypothesis, Bonferroni on Coefficients w/ Prediction
+
+
+>>> Febbraio 2022
+
+Pb1: PCA on Std. Variables, Screeplot, Projection for a New Datum
+Pb2: Hierarchical Clustering, Bonferroni in Each Cluster
+Pb3: LM w/ Interactions, Linear Hypothesis, Prediction (+ Visualization of the Multiple Regression on a 2D Plane)
+
+
+>>> Giugno 2022
+
+Pb1: Paired Data, CR, Bonferroni
+Pb2: QDA, AERCV, New Datum, SVM
+Pb3: LMM w/ Random Intercept, Linear Hypothesis, PVRE, Dotplot
+
+
+>>> Luglio 2022
+
+Pb1: PCA on Std. Variables, Scatterplot, SVM w/ New Datum 
+Pb2: Hierarchical Clustering, MANOVA 1-Way, CR in Each Cluster
+Pb3: LM w/ Interactions & Lasso Regression, Linear Hypothesis, CV, Prediction
+
+
+>>> Settembre 2022
+
+Pb1: ANOVA 2-Ways w Target Transformation, Statistical Tests, Estimates, Bonferroni (+ Inverse Box-Cox, Manual Statistical Tests)
+Pb2: LDA, APER & AERCV, kNN, New Datum
+Pb3: LM w/ Interactions, ANOVA on Target (?), R-squared, Prediction w/ Comment
+
 
 >>> Gennaio 2023
 

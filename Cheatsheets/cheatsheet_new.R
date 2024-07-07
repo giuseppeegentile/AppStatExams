@@ -2475,14 +2475,14 @@ c.pn <- 500
 
 p.pos <- 0.001
 p.neg <- 1-0.001
-prior = c(p.neg, p.pos)
+prior = c(p.neg, p.pos) # ATTENTION! The order reflects the one specified when we factorized groups at the beginning 
 prior
 
 prior.c <- c(p.neg*c.pn/(c.np*p.pos+c.pn*p.neg), p.pos*c.np/(c.np*p.pos+c.pn*p.neg))
 prior.c
 
 lda <- lda(target, groups, prior = prior.c)
-lda
+lda # Always control that the priors are correct
 
 ###### Parameters Estimation ------
 
@@ -2591,7 +2591,7 @@ rbind("Savings", prev_strategy_cost - cur_strategy_cost)
 
 new.datum <- c(-159.5, 21.9)
 
-points(new.datum[1], new.datum[2], pch = 19)
+points(new.datum[1], new.datum[2], pch = 5, cex = 1.5)
 
 lda.pred <- predict(lda, new.datum)
 lda.pred$class
@@ -2702,8 +2702,8 @@ svmfit$index
 
 n.g <- 100
 
-xgrid <- expand.grid(x.1 = seq(from = range(dat[, 1])[1], to = range(dat[, 1])[2],length = n.g),
-                     x.2 = seq(from = range(dat[, 2])[1], to = range(dat[, 2])[2],length = n.g))
+xgrid <- expand.grid(x.1 = seq(from = range(dat[, 1])[1], to = range(dat[, 1])[2], length = n.g),
+                     x.2 = seq(from = range(dat[, 2])[1], to = range(dat[, 2])[2], length = n.g))
 colnames(xgrid) <- colnames(dat)[1:2]
 ygrid <- predict(svmfit, xgrid)
 ygrid <- factor(ygrid, labels = c(0, 1)) # not necessary afterwards
@@ -2712,7 +2712,7 @@ plot(xgrid, col = c("blue", "red")[as.numeric(ygrid)], pch = 20, cex = .2)
 points(target, col = col.lab, pch = 19)
 points(target[svmfit$index, ], pch = 5, cex = 2)
 
-plot(target, col = col.lab ,pch = 19)
+plot(target, col = col.lab , pch = 19)
 contour(seq(from = range(dat[, 1])[1], to = range(dat[, 1])[2], length = n.g),
         seq(from = range(dat[, 2])[1], to = range(dat[, 2])[2], length = n.g),
         matrix(as.numeric(ygrid), n.g, n.g), level = 1.5, add = TRUE, drawlabels = F)
@@ -2919,7 +2919,7 @@ table(dbs$cluster)
 plot(data, col = dbs$cluster + 1, pch = 16, lwd = 2)
 
 
-##### Silhouette scores -----
+##### Silhouette Scores -----
 
 # How to tune the algorithm and find the "best" eps and minPts?
 # Silhouette score (from the package "cluster")
@@ -3126,6 +3126,11 @@ summary(m0)$r.squared # equivalent
 
 SSres / SStot.z # percentage of unexplained variability
 1 - summary(m0)$r.squared # equivalent
+
+# Models Comparison
+
+AIC(m0, m1) # the lower the better
+anova(m0, m1) # the lower the p-value, the more the bigger model is preferable (it can be computed when one model is nested in the other one)
 
 
 #### Inference on the Parameters ----
@@ -3357,7 +3362,7 @@ Var.I
 
 #### Prediction ----
 
-new.datum <- data.frame(reg1 = 1, reg2 = 2, reg3 = 3, dummy = as.logical("T"))
+new.datum <- data.frame(reg1 = 1, reg2 = 2, reg3 = 3, dummy = as.logical("T")) # I think dummy has to be specified as logical when it assumes T/TRUE values
 
 # Conf. int. for the mean
 Conf <- predict(m0, new.datum, interval = 'confidence', level = 1 - alpha)  
