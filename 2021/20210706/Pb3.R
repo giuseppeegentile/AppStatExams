@@ -28,22 +28,46 @@ sum((m0$residuals)^2)/m0$df
 
 # b) ----------------------------------------------------------------------
 
-par(mfrow=c(2,2))
-plot(m0)
-par(mfrow=c(1,1))
+target <- data$price
+treatment <- factor(data$OS)
 
-shapiro.test(m0$residuals)
-# p-value = 0.1274 -> OK
+n <- length(treatment)      
+ng <- table(treatment)       
+treat <- levels(treatment)      
+g <- length(levels(treatment))
 
-C <- rbind(c(0,1,0,0,0,0,0),
-           c(0,0,1,0,0,0,0),
-           c(0,0,0,1,0,0,0),
-           c(0,0,0,0,1,0,0),
-           c(0,0,0,0,0,1,0),
-           c(0,0,0,0,0,0,1))
+Ps <- NULL
+for(i in 1:g)
+{
+  Ps <- rbind(Ps, shapiro.test(target[treatment == treat[i]])$p)
+}
+dimnames(Ps)[[1]] <- treat
+dimnames(Ps)[[2]] <- c("p-value")
+Ps
+#           p-value
+# Linux   0.4923531
+# Mac     0.8788186
+# Windows 0.6341412
 
-linearHypothesis(m0, C, c(0,0,0,0,0,0))
-# 4.48e-10 *** -> the factor "OS" has a significant impact on the mean price
+Var <- NULL
+for(i in 1:g)
+{
+  Var <- rbind(Var, var(target[treatment == treat[i]]))
+}
+dimnames(Var)[[1]] <- treat
+dimnames(Var)[[2]] <- c("sigma^2")
+Var
+#           sigma^2
+# Linux    9028.154
+# Mac     28370.110
+# Windows 16318.757
+
+bartlett.test(target, treatment)
+# p-value = 0.05255 -> oooookkkkkk (????)
+
+fit <- aov(target ~ treatment)
+summary(fit)
+# 8.84e-07 *** -> at 10% the factor "OS" has a significant impact on the mean price of the pc
 
 
 # c) ----------------------------------------------------------------------
@@ -83,6 +107,8 @@ Conf
 
 
 # Extra -------------------------------------------------------------------
+
+# What is point b) about?
 
 treatment <- factor(data$OS)
 target <- data[, 2:3] # variables
