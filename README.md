@@ -1,6 +1,6 @@
 # README
 ## Disclaimer
-We do NOT guarantee correctness of any of the work done in this repo. We just want to provide some additional material to confront with, for the preparation of the exam.
+We do NOT guarantee correctness of any of the work done in this repo. We just want to provide some additional material to confront with for the preparation of the exam.
 In addition, we'd like to point out that we are High Perfomance Computing Engineering students, taking the exam for 5 credits, so you will NOT find any theory nor exercises on the topics of the last lecture of the course.
 
 ## Instructions
