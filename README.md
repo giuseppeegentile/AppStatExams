@@ -8,11 +8,11 @@ The repo is divided in branches. Each branch contains the material created by on
 
 ### Proposed exam solutions
 Each folder has the name of a year the course has taken place.
-For each year exam calls each one of us proposed solutions for the first three (or less) exercises.
+For each year exam calls each one of us proposed solutions for the first three (or less) exercises. \
 We do not guarantee correctness of any of the work done since we have been updating this repo while we were preparing for the exam and many exercise may have been done in a manner that later we discovered erroneous.
 
 ### Cheatsheet
-Each one of use wrote cheatsheet to use during the exams. These are files where we already prepared code to use during the exam according to the exercise proposed. These are intended to be modified as little as possible during the exam so some of the variable names may be a little generic and some code may be repeated. \\ 
+Each one of use wrote cheatsheet to use during the exams. These are files where we already prepared code to use during the exam according to the exercise proposed. These are intended to be modified as little as possible during the exam so some of the variable names may be a little generic and some code may be repeated. \
 We highly suggest to create yourself a cheatsheet like the ones in this repository so that you better know how to use it and where to find relevant code snippet to use during the exam. Of course you can use also ours by downloading them.
 
 ### Issues
