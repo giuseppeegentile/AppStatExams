@@ -119,7 +119,7 @@ cat("\014") # clear console
 
 #### Multivariate Data ----
 
-options(rgl.printRglwidget = TRUE) # library(rgl) is useful for 3D plots
+options(rgl.printRglwidget = TRUE) #!library(rgl) is useful for 3D plots
 
 plot(data)
 plot(data[, "feature1_name"], data[, "feature2_name"])
@@ -234,6 +234,8 @@ cov(data)
 cor(data)
 
 #### Various Aspects of Variance ----
+
+mean <- colMeans(data)
 
 covariance <- matrix(c(0, 0, 0, 0), nrow = 2, ncol = 2)
 SS <- 0
@@ -401,6 +403,16 @@ mvn(cbind(BC1, BC2))$multivariateNormality
 
 ##### Tests and Confidence Regions for the Mean -----
 
+### Try It Out! ###
+rm(list = ls())
+graphics.off()
+par(mfrow=c(1,1))
+cat("\014")
+data <- read.table('datasets/data_manova.txt', header = T)
+data <- data[, 1:2]
+plot(data)
+### Try It Out! ###
+
 n <- dim(data)[1]
 p <- dim(data)[2]
 
@@ -430,7 +442,10 @@ P
 ###### Inference Relying on Asymptotics ------
 
 T2A <- n * (M - mu0) %*%  S.inv  %*% (M - mu0)
+T2A
+
 cfr.chisq <- qchisq(1 - alpha, p)
+cfr.chisq
 
 T2A < cfr.chisq
 
@@ -590,7 +605,7 @@ Var.I
 plot(data, asp = 1, pch = 1, 
      xlim = c(min(data[, 1]) - 2, max(data[, 1]) + 2))
 
-abline(h = mu0[1], v = mu0[2], col = 'grey35', lty = 2)
+abline(h = mu0[2], v = mu0[1], col = 'grey35', lty = 2)
 points(mu0[1], mu0[2], col = 'red', pch = 9, cex = 1)
 
 ellipse(center = M, shape = S/n, radius = sqrt(cfr.fisher), lwd = 2, lty = 2, col = 'blue')
@@ -746,6 +761,16 @@ ellipse(center = M, shape = S, radius = sqrt(cfr.chisq), lwd = 2, lty = 2, col =
 ### PRINCIPAL COMPONENT ANALYSIS ###-------------------------------------------
 ###------------------------------###
 
+### Try It Out! ###
+rm(list = ls())
+graphics.off()
+par(mfrow=c(1,1))
+cat("\014")
+data <- read.table('datasets/data_pca.txt', header = T)
+data.label <- data[, 9]
+data <- data[, 1:8]
+### Try It Out! ###
+
 boxplot(data, las = 2, col = 'gold')
 boxplot(scale(x = data, center = T, scale = F), las = 2, col = 'gold')
 boxplot(scale(x = data, center = T, scale = T), las = 2, col = 'gold')
@@ -807,7 +832,7 @@ axis(1, at = 1:ncol(data.sd), labels = 1:ncol(data.sd), las = 2)
 pc.data$sdev^2
 
 # Proportion of variance explained by component 1
-var(as.matrix(data.sd) %*% load.data[, 1]) / sum(sapply(data.sd, var))
+var(as.matrix(data.sd) %*% pc.data$loadings[, 1]) / sum(sapply(data.sd, var))
 
 
 #### Loadings ----
@@ -832,8 +857,8 @@ for(i in 1:nPCs) barplot(load.data[, i], ylim = c(-1, 1), main = paste('Loadings
 
 scores.data <- pc.data$scores
 
-col.lab <- ifelse(data.label[] %in% c("feature2_name", "feature3_name"), 
-                  ifelse(data.label[] %in% c("feature3_name"), 
+col.lab <- ifelse(data.label[] %in% c("class2_name", "class3_name"), 
+                  ifelse(data.label[] %in% c("class3_name"), 
                          'blue', 'green'), 
                   'red')
 
@@ -842,8 +867,8 @@ plot(scores.data[, 1:2], col = col.lab, pch = 19,
      xlim = c(min(scores.data[, 1]) - 1, max(scores.data[, 1]) + 1), 
      ylim = c(min(scores.data[, 2]) - 1, max(scores.data[, 2]) + 1))
 abline(h = min(scores.data[, 2]) - 1, v = min(scores.data[, 1]) - 1, col = 1)
-points(scores.data[, 1], rep(min(scores.data[, 2]) - 1, n), col = col.lab, pch = 19)
-points(rep(min(scores.data[, 1]) - 1, n), scores.data[, 2], col = col.lab, pch = 19)
+points(scores.data[, 1], rep(min(scores.data[, 2]) - 1, dim(data)[1]), col = col.lab, pch = 19)
+points(rep(min(scores.data[, 1]) - 1, dim(data)[1]), scores.data[, 2], col = col.lab, pch = 19)
 abline(h = 0, v = 0, lty = 2, col = 'grey')
 legend('topright', levels(factor(data.label[])), fill = c('red', 'green', 'blue'), bty = 'n')
 
@@ -937,6 +962,14 @@ points(new.datum.std.score[1], new.datum.std.score[2], col = 'red', pch = 19)
 
 #### Paired Data ----
 
+### Try It Out! ###
+rm(list = ls())
+graphics.off()
+par(mfrow=c(1,1))
+cat("\014")
+data <- read.table('datasets/data_paired.txt', header = T)
+### Try It Out! ###
+
 D <- data.frame(DF1 = data$feature1_obs1 - data$feature1_obs2,
                 DF2 = data$feature2_obs1 - data$feature2_obs2) # may be useful to substitute DF1 w/ feature1's name
 D
@@ -969,6 +1002,16 @@ P
 
 ##### Confidence Intervals -----
 
+# Simultaneous T2 intervals
+
+T2.I <- cbind(D.mean - sqrt(cfr.fisher * diag(D.cov)/n),
+              D.mean,
+              D.mean + sqrt(cfr.fisher * diag(D.cov)/n))
+dimnames(T2.I)[[2]] <- c('inf', 'center', 'sup')
+T2.I
+
+# or
+
 T2.I <- NULL
 for(i in 1:p)
 {
@@ -980,17 +1023,18 @@ for(i in 1:p)
 dimnames(T2.I)[[2]] <- c('inf', 'center', 'sup')
 T2.I
 
-# or
-
-T2.I <- cbind(D.mean - sqrt(cfr.fisher * diag(D.cov)/n),
-              D.mean,
-              D.mean + sqrt(cfr.fisher * diag(D.cov)/n))
-dimnames(T2.I)[[2]] <- c('inf', 'center', 'sup')
-T2.I
-
+# Bonferroni intervals
 
 k <- p
 cfr.t <- qt(1 - alpha/(2*k), n-1)
+
+BF.I <- cbind(D.mean - cfr.t * sqrt(diag(D.cov)/n),
+              D.mean,
+              D.mean + cfr.t * sqrt(diag(D.cov)/n))
+dimnames(BF.I)[[2]] <- c('inf', 'center', 'sup')
+BF.I
+
+# or
 
 BF.I <- NULL
 for(i in 1:p)
@@ -1000,14 +1044,6 @@ for(i in 1:p)
                     D.mean[i] + cfr.t * sqrt(D.cov[i, i] / n))
   BF.I <- rbind(BF.I, BF.I.DFi)
 }
-dimnames(BF.I)[[2]] <- c('inf', 'center', 'sup')
-BF.I
-
-# or
-
-BF.I <- cbind(D.mean - cfr.t * sqrt(diag(D.cov)/n),
-              D.mean,
-              D.mean + cfr.t * sqrt(diag(D.cov)/n))
 dimnames(BF.I)[[2]] <- c('inf', 'center', 'sup')
 BF.I
 
@@ -1076,6 +1112,14 @@ segments(x.min[1], x.min[2], x.max[1], x.max[2], lty = 1, lwd = 2, col = 'forest
 
 
 #### Repeated Measures ----
+
+### Try It Out! ###
+rm(list = ls())
+graphics.off()
+par(mfrow=c(1,1))
+cat("\014")
+data <- read.table('datasets/data_repeated.txt', header = T)
+### Try It Out! ###
 
 mvn(data)$multivariateNormality
 
@@ -1163,9 +1207,22 @@ abline(h = 0, col = 'grey', lty = 2)
 legend('topright', c('Bonf. CI', 'Sim-T2 CI'), col = c('purple', 'orange'), lty = 1, lwd = 2)
 
 
-##### Confidence Region -----
+##### Confidence Region (for Differences) -----
 
-diff <- cbind(data[, 1] - data[, 2], data[, 1] - data[, 3]) # choose differences first
+C <- matrix(c(1, -1, 0, 0, 
+              1, 0, -1, 0), q-2, q, byrow = T)
+C
+
+alpha <- .05
+delta.0 <- c(0, 0)
+
+Md <- C %*% M 
+Sd <- C %*% S %*% t(C) 
+Sdinv <- solve(Sd)
+
+cfr.fisher <- ((q - 1) * (n - 1) / (n - (q - 1))) * qf(1 - alpha, (q - 1), n - (q - 1)) 
+
+diff <- cbind(data[, 1] - data[, 2], data[, 1] - data[, 3])
 
 plot(diff[, 1], diff[, 2], asp = 1, pch = 1, 
      xlim = c(min(diff[, 1]) - 2, max(diff[, 1]) + 2),
@@ -1175,6 +1232,21 @@ abline(h = delta.0[1], v = delta.0[2], col = 'grey35', lty = 2)
 points(delta.0[1], delta.0[2], col = 'red', pch = 9, cex = 1)
 
 ellipse(center = c(Md), shape = Sd/n, radius = sqrt(cfr.fisher), lwd = 2, lty = 2, col = 'blue')
+
+T2.I <- cbind(Md - sqrt(cfr.fisher * diag(Sd)/n),
+              Md,
+              Md + sqrt(cfr.fisher * diag(Sd)/n))
+dimnames(T2.I)[[2]] <- c('inf', 'center', 'sup')
+T2.I
+
+k <- q-2
+cfr.t <- qt(1 - alpha/(2*k), n-1)
+
+BF.I <- cbind(Md - cfr.t * sqrt(diag(Sd)/n),
+              Md,
+              Md + cfr.t * sqrt(diag(Sd)/n))
+dimnames(BF.I)[[2]] <- c('inf', 'center', 'sup')
+BF.I
 
 abline(v = T2.I[1, 1], col = 'orange', lwd = 1, lty = 2)
 abline(v = T2.I[1, 3], col = 'orange', lwd = 1, lty = 2)
@@ -1253,8 +1325,14 @@ delta.0 <- c(3, -5, 2)
 
 #### Two Independent Gaussian Populations ----
 
-data1 <- read.table('data_pop1.txt', header = T)
-data2 <- read.table('data_pop2.txt', header = T)
+### Try It Out! ###
+rm(list = ls())
+graphics.off()
+par(mfrow=c(1,1))
+cat("\014")
+data1 <- read.table('datasets/data_pop1.txt', header = T)
+data2 <- read.table('datasets/data_pop2.txt', header = T)
+### Try It Out! ###
 
 n1 <- dim(data1)[1] 
 n2 <- dim(data2)[1] 
@@ -1318,6 +1396,14 @@ P
 
 # Simultaneous T2 intervals
 
+T2.I <- cbind(data1.mean - data2.mean - sqrt(cfr.fisher * diag(Sp) * (1 / n1 + 1 / n2)),
+              data1.mean - data2.mean,
+              data1.mean - data2.mean + sqrt(cfr.fisher * diag(Sp) * (1 / n1 + 1 / n2)))
+dimnames(T2.I)[[2]] <- c('inf', 'center', 'sup')
+T2.I
+
+# or 
+
 T2.I <- NULL
 for(i in 1:p)
 {
@@ -1329,18 +1415,18 @@ for(i in 1:p)
 dimnames(T2.I)[[2]] <- c('inf', 'center', 'sup')
 T2.I
 
-# or
-
-T2.I <- cbind(data1.mean - data2.mean - sqrt(cfr.fisher * diag(Sp) * (1 / n1 + 1 / n2)),
-              data1.mean - data2.mean,
-              data1.mean - data2.mean + sqrt(cfr.fisher * diag(Sp) * (1 / n1 + 1 / n2)))
-dimnames(T2.I)[[2]] <- c('inf', 'center', 'sup')
-T2.I
-
 # Bonferroni intervals
 
 k <- p
 cfr.t <- qt(1 - alpha/(2*k), n1 + n2 - 2)
+
+BF.I <- cbind(data1.mean - data2.mean - cfr.t * sqrt(diag(Sp) * (1 / n1 + 1 / n2)),
+              data1.mean - data2.mean,
+              data1.mean - data2.mean + cfr.t * sqrt(diag(Sp) * (1 / n1 + 1 / n2)))
+dimnames(BF.I)[[2]] <- c('inf', 'center', 'sup')
+BF.I
+
+# or
 
 BF.I <- NULL
 for(i in 1:p)
@@ -1350,14 +1436,6 @@ for(i in 1:p)
                    data1.mean[i] - data2.mean[i] + cfr.t * sqrt(Sp[i, i] * (1 / n1 + 1 / n2)))
   BF.I <- rbind(BF.I, BF.I.Fi)
 }
-dimnames(BF.I)[[2]] <- c('inf', 'center', 'sup')
-BF.I
-
-# or
-
-BF.I <- cbind(data1.mean - data2.mean - cfr.t * sqrt(diag(Sp) * (1 / n1 + 1 / n2)),
-              data1.mean - data2.mean,
-              data1.mean - data2.mean + cfr.t * sqrt(diag(Sp) * (1 / n1 + 1 / n2)))
 dimnames(BF.I)[[2]] <- c('inf', 'center', 'sup')
 BF.I
 
@@ -1487,6 +1565,15 @@ abline(h=.01, lwd=2, col='red')
 ###-----------------------------------###
 
 #### One-way ANOVA ----
+
+### Try It Out! ###
+rm(list = ls())
+graphics.off()
+par(mfrow=c(1,1))
+cat("\014")
+data <- read.table('datasets/data_anova.txt', header = T)
+data <- data[, 1:2]
+### Try It Out! ###
 
 target <- data$target
 treatment <- factor(data$treatment)
@@ -1640,7 +1727,6 @@ for(i in 1:g) {
     P[i, j] <- (1 - pt(abs((Mediag[i] - Mediag[j]) / sqrt(S * (1/ng[i] + 1/ng[j]))), n-g))*2}
   P[i, i] <- 0
 }
-P
 
 p <- NULL
 for(i in 1:(g-2))
@@ -1669,8 +1755,17 @@ which(p.fdr < alpha)
 
 #### One-way MANOVA ----
 
-treatment <- factor(data$treatment)
+### Try It Out! ###
+rm(list = ls())
+graphics.off()
+par(mfrow=c(1,1))
+cat("\014")
+data <- read.table('datasets/data_manova.txt', header = T)
+data <- data[, 1:3]
+### Try It Out! ###
+
 target <- data[, 1:2] # variables
+treatment <- factor(data$treatment)
 
 n <- length(treatment)
 ng <- table(treatment)
@@ -1830,6 +1925,14 @@ par(mfrow=c(1,1))
 
 #### Two-ways ANOVA ----
 
+### Try It Out! ###
+rm(list = ls())
+graphics.off()
+par(mfrow=c(1,1))
+cat("\014")
+data <- read.table('datasets/data_anova.txt', header = T)
+### Try It Out! ###
+
 target <- data$target
 
 treatment1 <- factor(data$treatment1, labels = c('LvA', 'LvB', 'LvC')) 
@@ -1961,7 +2064,7 @@ SSres <- SStot - (SS.treat1 + SS.treat2) # Additive Model
 
 ## Calculating SS Manually [!!! THERE MIGHT BE SOME BUGS !!!]
 
-### Balanced Design
+### Balanced Design (look at table(treatments))
 
 SS.treat1 <- sum(n * b * (M.treat1 - M)^2)
 SS.treat2 <- sum(n * g * (M.treat2 - M)^2) 
@@ -1969,13 +2072,13 @@ SS.treat2 <- sum(n * g * (M.treat2 - M)^2)
 SS.treat1 <- 0
 for(i in 1:g)
 {
-  SS.treat1 <- SS.treat1 + n * (M.treat1[i] - M)^2
+  SS.treat1 <- SS.treat1 + n*b * (M.treat1[i] - M)^2
 }
 
 SS.treat2 <- 0
 for(j in 1:b)
 {
-  SS.treat2 <- SS.treat2 + n * (M.treat2[j] - M)^2
+  SS.treat2 <- SS.treat2 + n*g * (M.treat2[j] - M)^2
 }
 
 
@@ -2136,33 +2239,33 @@ abline(h = 0)
 
 ##### Reduced additive model (ANOVA one-way) -----
 
-# X.jk = mu + beta.j + eps.jk; eps.jk~N(0,sigma^2), 
-#     j=1,2 (effect treatment2)
-fit.aov1 <- aov(target ~ treatment2)
+# X.ik = mu + beta.i + eps.ik; eps.ik~N(0,sigma^2), 
+#     i=1,2,3 (effect treatment1)
+fit.aov1 <- aov(target ~ treatment1)
 summary.aov(fit.aov1)
 
 # Interval for the differences (reduced additive model)
 
 SSres <- sum(residuals(fit.aov1)^2)
 dofs <- fit.aov1$df.residual
-dofs <- (n*g-1)*b # if fitted ANOVA against treatment2
 dofs <- (n*b-1)*g # if fitted ANOVA against treatment1
+dofs <- (n*g-1)*b # if fitted ANOVA against treatment2
 
-k <- b * (b - 1) / 2 # Change "b" with "g" if fitted ANOVA against treatment1 
+k <- g * (g - 1) / 2 # Change "g" with "b" if fitted ANOVA against treatment2 
 alpha <- 0.05
-ng <- table(treatment2) # Change "2" with "1" if fitted ANOVA against treatment1 
+ng <- table(treatment1) # Change "1" with "2" if fitted ANOVA against treatment2 
 
-Mediag <- tapply(target, treatment2, mean) # Change "2" with "1" if fitted ANOVA against treatment1 
+Mediag <- tapply(target, treatment1, mean) # Change "1" with "2" if fitted ANOVA against treatment2 
 S <- SSres / dofs
 
 qT <- qt(1 - alpha/(2*k), dofs)
 
-treat <- levels(treatment2) # Change "2" with "1" if fitted ANOVA against treatment1 
+treat <- levels(treatment1) # Change "1" with "2" if fitted ANOVA against treatment2 
 
 CI.range <- NULL
-for(i in 1:(b-1)) # Change "b" with "g" if fitted ANOVA against treatment1 
+for(i in 1:(g-1)) # Change "g" with "b" if fitted ANOVA against treatment2 
 {
-  for(j in (i+1):b) # Change "b" with "g" if fitted ANOVA against treatment1 
+  for(j in (i+1):g) # Change "g" with "b" if fitted ANOVA against treatment2 
   {
     inf <- Mediag[i] - Mediag[j] - qT * sqrt(S * (1/ng[i] + 1/ng[j]))
     sup <- Mediag[i] - Mediag[j] + qT * sqrt(S * (1/ng[i] + 1/ng[j]))
@@ -2176,13 +2279,21 @@ CI.range
 
 #### Two-ways MANOVA ----
 
+### Try It Out! ###
+rm(list = ls())
+graphics.off()
+par(mfrow=c(1,1))
+cat("\014")
+data <- read.table('datasets/data_manova.txt', header = T)
+### Try It Out! ###
+
+target <- data[, 1:2] # variables
+
 treatment1 <- factor(data$treatment1, labels = c('LvA', 'LvB', 'LvC')) 
 treatment2 <- factor(data$treatment2, labels = c('LvX', 'LvY', 'LvZ')) 
 
 treatments <- factor(paste(treatment1, treatment2, sep=''))
 treatments
-
-target <- data[, 1:2] # variables
 
 g <- length(levels(treatment1))
 b <- length(levels(treatment2))
@@ -2211,7 +2322,7 @@ par(mfrow=c(1,1))
 # 1)  normality (multivariate) in each group
 Ps <- NULL
 for(i in 1:(g*b)) {
-  mvn.test <- mvn(data = target[treatment == treats[i], ])
+  mvn.test <- mvn(data = target[treatments == treats[i], ])
   Ps <- rbind(Ps, mvn.test$multivariateNormality$`p value`)
 }
 dimnames(Ps)[[1]] <- treats
@@ -2224,7 +2335,7 @@ covs <- list()
 covs[["S"]] <- cov(target)
 for(i in 1:(g*b))
 {
-  cov <- cov(target[treatment == treats[i], ])
+  cov <- cov(target[treatments == treats[i], ])
   covs[[paste("S", i, sep = '')]] <- cov
 }
 covs
@@ -2278,7 +2389,7 @@ qT <- qt(1 - alpha/(2*k), dofs)
 
 means <- NULL
 for(i in 1:(g*b)) {
-  means <- rbind(means, sapply(target[treatment == treats[i], ], mean)) 
+  means <- rbind(means, sapply(target[treatments == treats[i], ], mean)) 
 }
 dimnames(means)[[1]] <- treats
 means
@@ -2337,6 +2448,15 @@ par(mfrow=c(1,1))
 ### SUPERVISED CLASSIFICATION ###----------------------------------------------------------
 ###---------------------------###
 
+### Try It Out! ###
+rm(list = ls())
+graphics.off()
+par(mfrow=c(1,1))
+cat("\014")
+data <- read.table('datasets/data_classification.txt', header = T)
+data <- data[, c(1, 2, 5)]
+### Try It Out! ###
+
 groups <- factor(data$class, labels = c('N','P'))
 col.lab <- ifelse(groups %in% c("P"), 'red', 'blue')
 
@@ -2348,6 +2468,10 @@ n <- dim(data)[1]
 #### LDA & QDA ----
 
 ##### Univariate Case -----
+
+### Try It Out! ###
+data <- data[, c(2, 3)]
+### Try It Out! ###
 
 target <- data$target
 
@@ -2433,7 +2557,7 @@ legend(range(target)[1], 1, legend = c('P(NEG|X=x)', 'P(POS|X=x)'), fill = c('bl
 
 ##### Multivariate Case -----
 
-target <- data[, 1:4]
+target <- data[, 1:2]
 p <- dim(target)[2]
 
 plot(target, col = col.lab, pch = 20)
@@ -2589,9 +2713,9 @@ rbind("Savings", prev_strategy_cost - cur_strategy_cost)
 
 ##### Prediction -----
 
-new.datum <- c(-159.5, 21.9)
+new.datum <- c(6.75, 4.75)
 
-points(new.datum[1], new.datum[2], pch = 5, cex = 1.5)
+points(new.datum[1], new.datum[2], pch = 17, cex = 1.5)
 
 lda.pred <- predict(lda, new.datum)
 lda.pred$class
@@ -2600,6 +2724,10 @@ lda.pred$class
 #### k-Nearest Neighbors (kNN) ----
 
 ##### Univariate Case -----
+
+### Try It Out! ###
+data <- data[, c(2, 3)]
+### Try It Out! ###
 
 target <- data$target
 
@@ -2634,7 +2762,7 @@ par(mfrow=c(1,1))
 
 ##### Bivariate Case -----
 
-target <- data[, 3:4]
+target <- data[, 1:2]
 p <- dim(target)[2]
 
 plot(target, col = col.lab, pch = 20)
@@ -2670,11 +2798,11 @@ which(AERkCV == min(AERkCV)) # -> k = result + (5-1)
 
 ##### Prediction -----
 
-new.datum <- c(-159.5, 21.9)
+new.datum <- c(6.75, 4.75)
 
-points(new.datum[1], new.datum[2], pch = 19)
+points(new.datum[1], new.datum[2], pch = 17, cex = 1.5)
 
-knn.pred <- knn(train = target, test = new.datum, cl = groups, k = k)
+knn.pred <- knn(train = target, test = new.datum, cl = groups, k = 3)
 knn.pred
 
 
@@ -2682,7 +2810,7 @@ knn.pred
 
 ##### Linear Case -----
 
-target <- data[, c(1, 4)]
+target <- data[, 1:2]
 
 # The classes are not separable
 plot(target, col = col.lab, pch = 19, asp = 1)
@@ -2719,7 +2847,7 @@ contour(seq(from = range(dat[, 1])[1], to = range(dat[, 1])[2], length = n.g),
 
 # Prediction for a new observation (command predict())
 
-testdat <- data.frame(x = cbind(6.75, 6) , y = as.factor("N")) # y is usually not specified
+testdat <- data.frame(x = cbind(6.75, 4.75) , y = as.factor("N")) # y is usually not specified
 colnames(testdat)[1:2] <- colnames(dat)[1:2]
 
 ypred <- predict(svmfit, testdat)
@@ -2752,7 +2880,7 @@ bestmod$cost
 
 ##### Non-linear Case -----
 
-target <- data[, c(2, 4)]
+target <- data[, 1:2]
 
 plot(target, col = col.lab, pch = 19, asp = 1)
 
@@ -2769,6 +2897,14 @@ par(mfrow=c(1,1))
 ###------------###
 ### CLUSTERING ###----------------------------------------------------------
 ###------------###
+
+### Try It Out! ###
+rm(list = ls())
+graphics.off()
+par(mfrow=c(1,1))
+cat("\014")
+data <- read.table('datasets/data_clustering.txt', header = T)
+### Try It Out! ###
 
 n <- dim(data)[1]
 
@@ -2863,7 +2999,7 @@ lines(1:10, w/t, type = 'b', lwd = 2)
 
 #### K-Means ----
 
-k <- 3
+k <- 2
 result.k <- kmeans(data, centers = k) # Centers: fixed number of clusters
 
 names(result.k)
@@ -3062,6 +3198,14 @@ lines(1:4, Stressk, type = 'b', lwd = 2)
 ### LINEAR MODELS ###------------------------------------------------------
 ###---------------###
 
+### Try It Out! ###
+rm(list = ls())
+graphics.off()
+par(mfrow=c(1,1))
+cat("\014")
+data <- read.table('datasets/data_regression.txt', header = T)
+### Try It Out! ###
+
 # Fast way to write the formula (copy-paste the names row)
 
 head(data)
@@ -3136,8 +3280,8 @@ anova(m0, m1) # the lower the p-value, the more the bigger model is preferable (
 #### Inference on the Parameters ----
 
 alpha <- 0.05
-df <- m0$df # n - (r+1)
 r <- length(m0$coefficients) - 1 # number of regressors
+df <- m0$df # n - (r+1)
 
 # H0: (beta2, beta4) == (0, 0) vs H1: (beta2, beta4) != (0, 0)
 
@@ -3362,6 +3506,8 @@ Var.I
 
 #### Prediction ----
 
+alpha <- 0.05
+
 new.datum <- data.frame(reg1 = 1, reg2 = 2, reg3 = 3, dummy = as.logical("T")) # I think dummy has to be specified as logical when it assumes T/TRUE values
 
 # Conf. int. for the mean
@@ -3374,7 +3520,7 @@ Pred
 
 Pred[1, "fit"]
 
-range(data[which(data$dummy == "handmade"), ]$reg1)
+range(data[which(data$dummy == "Yes"), ]$reg1)
 # Are we far from the data baricenter?
 
 
@@ -3390,9 +3536,9 @@ shapiro.test(m0$residuals)
 
 par(mfrow=c(2,floor(r/2)+r%%2))
 
-for(i in 1:r)
+for(i in 1:r) # (correct with (r-1) instead of r if there is a dummy as last regressor, f.e.)
 {
-  plot(data[, i], m0$residuals, xlab = colnames(data)[i], pch = 19)
+  plot(data[, names(m0$coefficients)[i+1]], m0$residuals, xlab = names(m0$coefficients)[i+1], pch = 19)
   abline(h = 0)
 }
 
@@ -3442,6 +3588,8 @@ for(i in 1:length(means))
     beta[i] <- beta[i] + m1.pc$coef[j+1] * pc.data$load[i, j]
   }
 }
+beta0
+beta
 
 
 ##### Ridge/Lasso Regression -----
@@ -3513,6 +3661,14 @@ Pred
 ### LINEAR MIXED MODELS ###------------------------------------------------------
 ###---------------------###
 
+### Try It Out! ###
+rm(list = ls())
+graphics.off()
+par(mfrow=c(1,1))
+cat("\014")
+data <- read.table('datasets/data_heteroschedasticity.txt', header = T)
+### Try It Out! ###
+
 target <- data$target
 time <- data$time
 grouping <- data$grouping
@@ -3524,7 +3680,7 @@ class <- data$class
 class <- ifelse(class == 1, "closer", "farther")
 
 xy1 <- xyplot(target ~ time | class, #!library(lattice)
-              groups = grouping, # f.e. subjects, i from 1 to 240
+              groups = grouping, # f.e. subjects, i from 1 to 40
               data = data,
               type = "l", lty = 1)
 update(xy1, xlab = "Time",
@@ -3783,6 +3939,14 @@ plot(update(stdres.plot,
 
 #### Introduce Randomness ----
 
+### Try It Out! ###
+rm(list = ls())
+graphics.off()
+par(mfrow=c(1,1))
+cat("\014")
+data <- read.table('datasets/data_mixed.txt', header = T)
+### Try It Out! ###
+
 ##### Random Intercept -----
 # Linear Model with Homoschedastic Residuals and Random Intercept [lmer() function]
 
@@ -3842,7 +4006,7 @@ dotplot(ranef(m1, condVar = T)) #!library(lattice)
 # Extract fixed+random intercepts
 
 coef(m1)[[1]][1]
-fixef(m1)[1] + ranef(m1)[[1]]
+fixef(m1)[1] + ranef(m1)[[1]] # equivalent
 
 
 ###### Prediction ------
